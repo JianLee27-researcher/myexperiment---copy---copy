@@ -714,6 +714,21 @@ class ComprehensionCheck(Page):
         return {'role': role, 'is_pa': is_pa(player)}
 
 
+class RoleAssignment(Page):
+    """
+    Shown once (Round 1 only). Assigns and displays the participant's role
+    (Purchasing Analyst or Sustainability Analyst) and sets role_label in DB.
+    """
+    @staticmethod
+    def is_displayed(player): return is_round_1(player)
+
+    @staticmethod
+    def vars_for_template(player):
+        role = C.ROLE_PA if is_pa(player) else C.ROLE_SA
+        player.role_label = role
+        return {'role': role, 'is_pa': is_pa(player)}
+
+
 class Briefing(Page):
     @staticmethod
     def is_displayed(player): return is_round_1(player)
