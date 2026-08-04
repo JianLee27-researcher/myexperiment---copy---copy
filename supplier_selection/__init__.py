@@ -904,20 +904,6 @@ class PAWaitForSA(WaitPage):
 
 
 class AIRecommendation(Page):
-    """
-    PA sees AI recommendation + (High) round-specific explanation + score table.
-
-    FIRST position (default): AI → PA → SA
-      PA sees AI recommendation first, then submits their choice.
-
-    MIDDLE position: PA(initial) → AI → PA(revised) → SA
-      PA has already made an initial choice (PAInitialDecision).
-      Now PA sees AI recommendation and may revise their choice.
-      pa_initial_choice is shown for comparison.
-
-    SYNC: SAWaitForPA is active — SA waits on a wait page.
-    ASYNC: SAWaitForPA skipped — SA accesses independently after PA submits.
-    """
     @staticmethod
     def is_displayed(player): return is_pa(player)
 
@@ -931,9 +917,10 @@ class AIRecommendation(Page):
         ai_rec       = group.ai_recommendation
         rnd          = player.round_number
 
-# 🎯 서버 터미널/로그 출력용 디버깅 코드 추가
-        print(f" DEBUG - Round {rnd}: ai_rec in group = '{ai_rec}'")
-        print(f" DEBUG - Session vars ai_recommendation = '{player.session.vars.get('ai_recommendation')}'")
+        # 🛡️ 안전장치: group.ai_recommendation이 없으면 session.vars나 기본값 'A' 지정
+        if not ai_rec:
+            ai_rec = player.session.vars.get('ai_recommendation', 'A')
+            group.ai_recommendation = ai_rec
 
         round_explanation = ROUND_EXPLANATIONS.get(ai_rec, {}).get(rnd, '')
 
@@ -951,7 +938,7 @@ class AIRecommendation(Page):
 
         return {
             'transparency':       transparency,
-            'ai_recommendation':  ai_rec,
+            'ai_recommendation':  ai_rec,  # 👈 템플릿 전달
             'round_explanation':  round_explanation,
             'score_rows':         score_rows,
             'ai_weights_pa':      AI_WEIGHTS_PA,
@@ -959,7 +946,7 @@ class AIRecommendation(Page):
             'round_number':       rnd,
             'ai_position':        group.ai_position,
             'is_middle':          group.ai_position == 'middle',
-            'pa_initial_choice':  group.pa_initial_choice,  # shown in middle condition
+            'pa_initial_choice':  group.pa_initial_choice,
         }
 
 
