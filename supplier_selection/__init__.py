@@ -931,6 +931,10 @@ class AIRecommendation(Page):
         ai_rec       = group.ai_recommendation
         rnd          = player.round_number
 
+# 🎯 서버 터미널/로그 출력용 디버깅 코드 추가
+        print(f" DEBUG - Round {rnd}: ai_rec in group = '{ai_rec}'")
+        print(f" DEBUG - Session vars ai_recommendation = '{player.session.vars.get('ai_recommendation')}'")
+
         round_explanation = ROUND_EXPLANATIONS.get(ai_rec, {}).get(rnd, '')
 
         score_rows = []
