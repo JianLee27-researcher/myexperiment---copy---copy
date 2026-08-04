@@ -328,6 +328,7 @@ class C(BaseConstants):
 
 class Subsession(BaseSubsession):
     def creating_session(self):
+        print(f"DEBUG creating_session called — round {self.round_number}")
         transparency   = self.session.config.get('transparency',   'high')
         ai_position    = self.session.config.get('ai_position',    'first')
         accuracy_mode  = self.session.config.get('accuracy_mode',  'fixed')
