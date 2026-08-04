@@ -1,0 +1,181 @@
+{{ block title }}Experiment Complete — Results{{ endblock }}
+{{ block content }}
+
+<div class="container mt-3" style="max-width: 840px;">
+
+  <!-- Thank You Banner -->
+  <div class="card border-0 mb-4 text-center text-white"
+       style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);">
+    <div class="card-body py-5">
+      <div class="fs-1 mb-2">✅</div>
+      <h2 class="fw-bold">Thank You for Participating!</h2>
+      <p class="mb-0 opacity-75">
+        You have completed all 5 rounds of the supplier selection experiment.
+      </p>
+    </div>
+  </div>
+
+  <!-- Condition -->
+  <div class="alert alert-light border mb-4">
+    <strong>Your condition:</strong> AI Transparency —
+    {% if transparency == 'high' %}
+      <span class="badge bg-primary">High (Glass Box)</span>
+    {% else %}
+      <span class="badge bg-secondary">Low (Black Box)</span>
+    {% endif %}
+  </div>
+
+  <!-- Monetary Reward -->
+  <div class="card border-0 shadow-sm mb-4" style="border-left: 6px solid #198754 !important;">
+    <div class="card-header fw-semibold bg-success text-white">
+      💰 Your Performance Bonus
+    </div>
+    <div class="card-body p-4">
+      <div class="row text-center g-3 mb-3">
+        <div class="col-md-4">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Rounds with optimal choice</div>
+            <div class="fs-2 fw-bold text-success">{{ optimal_rounds }} / 5</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Bonus per optimal round</div>
+            <div class="fs-2 fw-bold">€ {{ bonus_per_round }}</div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Your performance bonus</div>
+            <div class="fs-2 fw-bold text-success">€ {{ performance_bonus }}</div>
+          </div>
+        </div>
+      </div>
+      <p class="text-muted small mb-0">
+        Your total compensation = participation fee + performance bonus (€ {{ performance_bonus }}).
+        Payment will be processed after the session closes.
+      </p>
+    </div>
+  </div>
+
+  <!-- Cumulative Δw -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-dark text-white">
+      Cumulative Performance Gap (Δw across 5 rounds)
+    </div>
+    <div class="card-body">
+      <div class="row text-center g-3">
+        <div class="col-md-6">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Total Purchasing Gap (PA)</div>
+            <div class="fs-2 fw-bold
+              {% if cumulative_dw_pa == 0 %}text-success
+              {% elif cumulative_dw_pa < 0.5 %}text-warning
+              {% else %}text-danger{% endif %}">
+              Σ Δw = {{ cumulative_dw_pa }}
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Total CSR Gap (SA)</div>
+            <div class="fs-2 fw-bold
+              {% if cumulative_dw_sa == 0 %}text-success
+              {% elif cumulative_dw_sa < 0.5 %}text-warning
+              {% else %}text-danger{% endif %}">
+              Σ Δw = {{ cumulative_dw_sa }}
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="text-muted small mt-3 mb-0">
+        Δw = 0 means the team's choice matched the optimal recommendation every round.
+        Higher values indicate greater cumulative deviation.
+      </p>
+    </div>
+  </div>
+
+  <!-- Round-by-Round Summary -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-dark text-white">Round-by-Round Summary</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered text-center mb-0">
+          <thead class="table-dark">
+            <tr>
+              <th>Round</th>
+              <th>PA Choice</th>
+              <th>Team Decision</th>
+              <th>Optimal?</th>
+              <th>Δw (PA)</th>
+              <th>Δw (SA)</th>
+              <th>Congruence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in round_summary %}
+            <tr {% if r.optimal %}class="table-success"{% endif %}>
+              <td class="fw-semibold">{{ r.round }}</td>
+              <td>
+                <span class="badge bg-primary">{{ r.pa_choice }}</span>
+              </td>
+              <td>
+                <span class="badge {% if r.optimal %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                  {{ r.sa_choice }}
+                </span>
+              </td>
+              <td>
+                {% if r.optimal %}
+                  <span class="text-success fw-bold">✓</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>{{ r.dw_pa }}</td>
+              <td>{{ r.dw_sa }}</td>
+              <td>
+                <span class="badge
+                  {% if r.congruence == 'full' %}bg-success
+                  {% elif r.congruence == 'partial' %}bg-warning text-dark
+                  {% else %}bg-danger{% endif %}">
+                  {{ r.congruence }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Debrief -->
+  <div class="card border-warning border-2 mb-4">
+    <div class="card-header fw-semibold bg-warning text-dark">Study Debrief</div>
+    <div class="card-body p-4">
+      <p>
+        This study examined how <strong>AI transparency</strong> affects trust and
+        decision-making in two-person procurement teams. Participants were randomly assigned
+        to either a <em>high-transparency</em> (Glass Box) or <em>low-transparency</em>
+        (Black Box) AI condition.
+      </p>
+      <p>
+        The AI recommendation system was a controlled simulation (Wizard of Oz design).
+        In most sessions, the AI correctly identified the optimal supplier based on
+        weighted scoring criteria. In some sessions, the AI's recommendation was
+        intentionally imperfect to reflect the realistic limitations of AI systems.
+      </p>
+      <p class="mb-0">
+        Your data will be analysed in aggregate to understand how transparency shapes
+        <strong>trust calibration</strong> and <strong>team decision alignment</strong>
+        in human-AI collaboration.
+      </p>
+    </div>
+  </div>
+
+  <div class="text-center text-muted mb-5">
+    <p>You may now close this browser tab. Thank you for your contribution to this research.</p>
+  </div>
+
+</div>
+{{ endblock }}

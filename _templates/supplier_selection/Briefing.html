@@ -1,0 +1,228 @@
+{{ block title }}Task Briefing{{ endblock }}
+{{ block content }}
+
+<div class="container mt-3" style="max-width: 860px;">
+
+  <div class="alert alert-secondary">
+    <strong>Round 1 of 5 — Pre-task Briefing.</strong>
+    Please read the following information carefully before the experiment begins.
+  </div>
+
+  <!-- Scenario -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white fw-semibold">Scenario</div>
+    <div class="card-body p-4">
+      <p>
+        Your company is selecting a strategic supplier for a key component.
+        You must choose <strong>one supplier</strong> from six candidates (A, B, C, D, E, F).
+        The decision involves an <strong>AI recommendation system</strong> followed by a
+        two-stage human review: the Purchasing Analyst (PA) evaluates operational criteria,
+        and the Sustainability Analyst (SA) makes the final decision on CSR factors.
+      </p>
+      <!-- Round repetition rationale — why 5 rounds -->
+      <div class="alert alert-light border mt-3 mb-0">
+        <strong>Why 5 rounds?</strong> {{ round_repeat_rationale }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Score origin note -->
+  <div class="alert alert-light border border-info mb-4">
+    <span class="fw-semibold">📐 About the scores:</span>
+    Supplier scores are normalised between 0 and 1 using a Min-Max method based on
+    raw procurement data. Criteria weights were derived from established procurement
+    literature (Dickson, 1966; Weber et al., 1991). Higher scores are always better.
+  </div>
+
+  <!-- AI Fallibility Notice -->
+  <div class="alert alert-light border border-warning mb-4">
+    <span class="fw-semibold">📌 Note on the AI system:</span>
+    Like all AI systems, this tool may not always produce the optimal outcome.
+    Your judgment as a team matters — please evaluate the AI's recommendation
+    critically rather than accepting it automatically.
+  </div>
+
+  <!-- ════════════════════════════════════════
+       INFORMATION ASYMMETRY:
+       PA sees ONLY purchasing criteria.
+       SA sees ONLY CSR criteria.
+  ════════════════════════════════════════ -->
+
+  {% if is_pa %}
+  <!-- ── PA: Purchasing Criteria Only ────── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white fw-semibold">
+      Supplier Performance — Purchasing Criteria (Min-Max Normalised, 0–1)
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0 text-center">
+          <thead class="table-dark">
+            <tr>
+              <th>Supplier</th>
+              <th class="text-primary">Cost<br><small class="fw-normal">w = 0.30</small></th>
+              <th class="text-primary">Delivery<br><small class="fw-normal">w = 0.40</small></th>
+              <th class="text-primary">Innovation<br><small class="fw-normal">w = 0.30</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in pa_rows %}
+            <tr>
+              <td class="fw-bold">{{ row.supplier }}</td>
+              <td>{{ row.cost }}</td>
+              <td>{{ row.delivery }}</td>
+              <td>{{ row.innovation }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted small p-2 mb-0">
+        Higher scores are better for all criteria. Scores are normalised on a 0–1 scale.
+      </p>
+    </div>
+  </div>
+
+  <!-- Collapsible quick-reference panel for PA -->
+  <details class="mb-4">
+    <summary class="btn btn-outline-secondary btn-sm">
+      📋 Show criteria reference (available during each round)
+    </summary>
+    <div class="card border mt-2">
+      <div class="card-body p-3">
+        <p class="text-muted small mb-2">
+          You can expand this panel at any time during the experiment to remind
+          yourself of the supplier scores.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm text-center mb-0">
+            <thead class="table-secondary">
+              <tr>
+                <th>Supplier</th>
+                <th>Cost (0.30)</th>
+                <th>Delivery (0.40)</th>
+                <th>Innovation (0.30)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in pa_rows %}
+              <tr>
+                <td class="fw-bold">{{ row.supplier }}</td>
+                <td>{{ row.cost }}</td>
+                <td>{{ row.delivery }}</td>
+                <td>{{ row.innovation }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="card border-primary border-2 mb-4">
+    <div class="card-header bg-primary text-white fw-semibold">Your Task — Purchasing Analyst</div>
+    <div class="card-body">
+      <ol class="mb-0">
+        <li>You will first see the <strong>AI system's recommendation</strong> and its reasoning.</li>
+        <li>Review the AI's rationale and the supplier purchasing scores.</li>
+        <li>Submit your own supplier recommendation.</li>
+        <li>Your choice is passed to the Sustainability Analyst for the final decision.</li>
+      </ol>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ── SA: CSR Criteria Only ────────────── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-dark text-white fw-semibold">
+      Supplier Performance — CSR Criteria (Min-Max Normalised, 0–1)
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover mb-0 text-center">
+          <thead class="table-dark">
+            <tr>
+              <th>Supplier</th>
+              <th class="text-success">Human Rights<br><small class="fw-normal">w = 0.333</small></th>
+              <th class="text-success">Local<br><small class="fw-normal">w = 0.333</small></th>
+              <th class="text-success">Carbon<br><small class="fw-normal">w = 0.334</small></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in sa_rows %}
+            <tr>
+              <td class="fw-bold">{{ row.supplier }}</td>
+              <td>{{ row.human_rights }}</td>
+              <td>{{ row.local }}</td>
+              <td>{{ row.carbon }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <p class="text-muted small p-2 mb-0">
+        Higher scores are better for all criteria.
+        Carbon score is inverted: higher = lower carbon footprint.
+      </p>
+    </div>
+  </div>
+
+  <!-- Collapsible quick-reference panel for SA -->
+  <details class="mb-4">
+    <summary class="btn btn-outline-secondary btn-sm">
+      📋 Show criteria reference (available during each round)
+    </summary>
+    <div class="card border mt-2">
+      <div class="card-body p-3">
+        <p class="text-muted small mb-2">
+          You can expand this panel at any time during the experiment to remind
+          yourself of the supplier scores.
+        </p>
+        <div class="table-responsive">
+          <table class="table table-bordered table-sm text-center mb-0">
+            <thead class="table-secondary">
+              <tr>
+                <th>Supplier</th>
+                <th>Human Rights (0.333)</th>
+                <th>Local (0.333)</th>
+                <th>Carbon (0.334)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in sa_rows %}
+              <tr>
+                <td class="fw-bold">{{ row.supplier }}</td>
+                <td>{{ row.human_rights }}</td>
+                <td>{{ row.local }}</td>
+                <td>{{ row.carbon }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="card border-success border-2 mb-4">
+    <div class="card-header bg-success text-white fw-semibold">Your Task — Sustainability Analyst</div>
+    <div class="card-body">
+      <ol class="mb-0">
+        <li>You will see the <strong>Purchasing Analyst's supplier choice</strong>.</li>
+        <li>Evaluate it against the CSR scores above.</li>
+        <li>Make the <strong>final team decision</strong> by selecting a supplier.</li>
+      </ol>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="alert alert-warning">
+    <strong>Please do not communicate with your partner</strong> outside of the information
+    shown on your screen during the experiment.
+  </div>
+
+  <div class="text-center mt-3">{{ next_button }}</div>
+
+</div>
+{{ endblock }}

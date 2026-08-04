@@ -1,0 +1,23 @@
+{{ block title }}Round {{ round_number }} — Waiting{{ endblock }}
+{{ block content }}
+
+<div class="container mt-5 text-center" style="max-width: 540px;">
+  <div class="card border-0 shadow-sm p-4">
+    <div class="mb-3">
+      <div class="spinner-border text-success" role="status" style="width: 3rem; height: 3rem;">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+    </div>
+    <h4 class="fw-bold mb-2">Waiting for the Sustainability Analyst…</h4>
+    <p class="text-muted">
+      Your partner is reviewing the CSR data and making the final supplier selection.
+      You will proceed automatically once the decision is submitted.
+    </p>
+    <hr>
+    <p class="text-muted small mb-0">
+      📋 <strong>Purchasing Analyst</strong> — Your recommendation has been passed to your partner.
+    </p>
+  </div>
+</div>
+
+{{ endblock }}

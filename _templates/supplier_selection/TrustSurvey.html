@@ -1,0 +1,139 @@
+{{ block title }}Post-Task Survey{{ endblock }}
+{{ block content }}
+
+<div class="container mt-3" style="max-width: 800px;">
+
+  <!-- Role-specific intro (SA sees different text acknowledging indirect AI exposure) -->
+  <div class="alert alert-info">
+    <strong>Post-Task Survey</strong> — {{ survey_intro }}
+    There are no right or wrong answers.
+  </div>
+
+  <!-- Scale note: similar questions measure different things -->
+  <div class="alert alert-light border mb-4">
+    <small>{{ scale_note }}</small>
+  </div>
+
+  <!-- ── Section 1: Reliability (McKnight — 7pt, no N/A) ──── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-dark text-white">
+      Section 1: Reliability
+      <small class="fw-normal ms-2 opacity-75">1 = Strongly Disagree &nbsp;·&nbsp; 7 = Strongly Agree</small>
+    </div>
+    <div class="card-body p-4">
+      {% formfield player.trust_reliability_1 %}
+      {% formfield player.trust_reliability_2 %}
+      {% formfield player.trust_reliability_3 %}
+      {% formfield player.trust_reliability_4 %}
+    </div>
+  </div>
+
+  <!-- ── Section 2: Functionality (McKnight — 7pt, no N/A) ── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-dark text-white">
+      Section 2: Functionality
+      <small class="fw-normal ms-2 opacity-75">1 = Strongly Disagree &nbsp;·&nbsp; 7 = Strongly Agree</small>
+    </div>
+    <div class="card-body p-4">
+      {% formfield player.trust_functionality_1 %}
+      {% formfield player.trust_functionality_2 %}
+      {% formfield player.trust_functionality_3 %}
+    </div>
+  </div>
+
+  <!-- ── Section 3: Helpfulness (McKnight — 7pt, no N/A) ──── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-dark text-white">
+      Section 3: Helpfulness
+      <small class="fw-normal ms-2 opacity-75">1 = Strongly Disagree &nbsp;·&nbsp; 7 = Strongly Agree</small>
+    </div>
+    <div class="card-body p-4">
+      {% formfield player.trust_helpfulness_1 %}
+      {% formfield player.trust_helpfulness_2 %}
+      {% formfield player.trust_helpfulness_3 %}
+      {% formfield player.trust_helpfulness_4 %}
+    </div>
+  </div>
+
+  <!-- ── Section 4: Team Trust (exploratory — 7pt + N/A) ──── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-secondary text-white">
+      Section 4: Team Trust
+      <small class="fw-normal ms-2 opacity-75">
+        0 = I could not assess this &nbsp;·&nbsp; 1 = Strongly Disagree &nbsp;·&nbsp; 7 = Strongly Agree
+      </small>
+    </div>
+    <div class="card-body p-4">
+      <div class="alert alert-light border mb-3">
+        <small>
+          If you feel you were unable to evaluate this aspect of the team process,
+          you may select <strong>0 — I could not assess this</strong>.
+        </small>
+      </div>
+      {% formfield player.trust_team_1 %}
+      {% formfield player.trust_team_2 %}
+    </div>
+  </div>
+
+  <!-- ── Section 5: Interpersonal Trust (exploratory — 7pt + N/A) -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-secondary text-white">
+      Section 5: Interpersonal Trust
+      <small class="fw-normal ms-2 opacity-75">
+        0 = I could not assess this &nbsp;·&nbsp; 1 = Strongly Disagree &nbsp;·&nbsp; 7 = Strongly Agree
+      </small>
+    </div>
+    <div class="card-body p-4">
+      <div class="alert alert-light border mb-3">
+        <small>
+          If you feel you were unable to evaluate your partner during this task,
+          you may select <strong>0 — I could not assess this</strong>.
+        </small>
+      </div>
+      {% formfield player.trust_interpersonal_1 %}
+      {% formfield player.trust_interpersonal_2 %}
+    </div>
+  </div>
+
+  <!-- ── Section 6: AI Transparency (exploratory — 5pt + N/A) -->
+  <!--
+    SA-specific note: SA did not see AI directly — the N/A option is especially
+    relevant here. The survey_intro already acknowledges this at page level.
+  -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-bold bg-primary text-white">
+      Section 6: AI Transparency
+      <small class="fw-normal ms-2 opacity-75">
+        0 = I could not assess this &nbsp;·&nbsp; 1 = Strongly Disagree &nbsp;·&nbsp; 5 = Strongly Agree
+      </small>
+    </div>
+    <div class="card-body p-4">
+      {% if is_sa %}
+      <div class="alert alert-warning border mb-3">
+        <small>
+          <strong>Note for Sustainability Analyst:</strong> You did not interact with the
+          AI system directly. Please answer based on your impression of how the AI's
+          reasoning was communicated through your partner's choice. If you feel unable
+          to judge, select <strong>0 — I could not assess this</strong>.
+        </small>
+      </div>
+      {% else %}
+      <div class="alert alert-light border mb-3">
+        <small>
+          If you feel you were unable to assess the AI's transparency,
+          select <strong>0 — I could not assess this</strong>.
+        </small>
+      </div>
+      {% endif %}
+      {% formfield player.mc_transparency_1 %}
+      {% formfield player.mc_transparency_2 %}
+    </div>
+  </div>
+
+  <div class="text-end mt-2 mb-5">
+    {{ next_button }}
+  </div>
+
+</div>
+
+{{ endblock }}

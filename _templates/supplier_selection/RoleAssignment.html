@@ -1,0 +1,86 @@
+{{ block title }}Your Role{{ endblock }}
+{{ block content }}
+
+<div class="container mt-4" style="max-width: 680px;">
+
+  {% if is_pa %}
+  <div class="card border-0 shadow-sm" style="border-left: 6px solid #0d6efd !important;">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center mb-3">
+        <span class="fs-1 me-3">📋</span>
+        <div>
+          <h4 class="mb-0 fw-bold text-primary">Purchasing Analyst (PA)</h4>
+          <small class="text-muted">Your assigned role for this experiment</small>
+        </div>
+      </div>
+      <hr>
+      <h5 class="fw-semibold mb-2">Your Responsibilities</h5>
+      <ul class="mb-3">
+        <li>Review the <strong>AI system's supplier recommendation</strong></li>
+        <li>Evaluate suppliers on <strong>purchasing criteria</strong>:
+            cost efficiency, delivery reliability, and innovation capability</li>
+        <li>Submit your recommendation to your partner (Sustainability Analyst)</li>
+      </ul>
+      <h5 class="fw-semibold mb-2">Your Evaluation Criteria &amp; AI Weights</h5>
+      <table class="table table-sm table-bordered text-center">
+        <thead class="table-light">
+          <tr><th>Criterion</th><th>AI Weight</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Cost Efficiency</td><td>30%</td></tr>
+          <tr><td>Delivery Reliability</td><td>40%</td></tr>
+          <tr><td>Innovation Capability</td><td>30%</td></tr>
+        </tbody>
+      </table>
+      <div class="alert alert-info mb-0">
+        <strong>Note:</strong> You will <em>first</em> see the AI's recommendation before
+        making your own choice. Your recommendation is then passed to the Sustainability Analyst.
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <div class="card border-0 shadow-sm" style="border-left: 6px solid #198754 !important;">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center mb-3">
+        <span class="fs-1 me-3">🌱</span>
+        <div>
+          <h4 class="mb-0 fw-bold text-success">Sustainability Analyst (SA)</h4>
+          <small class="text-muted">Your assigned role for this experiment</small>
+        </div>
+      </div>
+      <hr>
+      <h5 class="fw-semibold mb-2">Your Responsibilities</h5>
+      <ul class="mb-3">
+        <li>Review the <strong>AI recommendation</strong> and the
+            <strong>Purchasing Analyst's choice</strong></li>
+        <li>Evaluate suppliers on <strong>CSR criteria</strong>:
+            human rights compliance, local community impact, and carbon footprint</li>
+        <li>Make the <strong>final team decision</strong> on which supplier to select</li>
+      </ul>
+      <h5 class="fw-semibold mb-2">Your Evaluation Criteria &amp; AI Weights</h5>
+      <table class="table table-sm table-bordered text-center">
+        <thead class="table-light">
+          <tr><th>Criterion</th><th>AI Weight</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Human Rights Compliance</td><td>33.3%</td></tr>
+          <tr><td>Local Community Impact</td><td>33.3%</td></tr>
+          <tr><td>Carbon Footprint</td><td>33.4%</td></tr>
+        </tbody>
+      </table>
+      <div class="alert alert-info mb-0">
+        <strong>Note:</strong> You make the <em>final</em> team decision. Consider both
+        the AI's recommendation and your partner's input when selecting a supplier.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="text-center mt-4">
+    {{ next_button }}
+  </div>
+
+</div>
+
+{{ endblock }}

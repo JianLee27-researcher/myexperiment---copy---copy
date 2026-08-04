@@ -1,0 +1,26 @@
+{{ block title }}Background Information{{ endblock }}
+{{ block content }}
+
+<div class="container mt-3" style="max-width: 620px;">
+
+  <div class="alert alert-secondary">
+    <strong>Final Step — Background Information</strong><br>
+    These questions are for statistical purposes only. All responses are anonymous.
+  </div>
+
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-dark text-white">Demographic Information</div>
+    <div class="card-body p-4">
+
+      {{ formfields }}
+
+    </div>
+  </div>
+
+  <div class="text-center">
+    {{ next_button }}
+  </div>
+
+</div>
+
+{{ endblock }}

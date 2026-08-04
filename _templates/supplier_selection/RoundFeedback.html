@@ -1,0 +1,147 @@
+{{ block title }}Round {{ round_number }} — Feedback{{ endblock }}
+{{ block content }}
+
+<div class="container mt-3" style="max-width: 780px;">
+
+  <div class="alert alert-secondary">
+    <strong>Round {{ round_number }} of 5 — Results &amp; AI Feedback</strong>
+  </div>
+
+  <!-- ── Round Decision Summary ───────────────────── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-dark text-white">Round Summary</div>
+    <div class="card-body p-0">
+      <table class="table table-bordered mb-0 text-center">
+        <thead class="table-light">
+          <tr>
+            <th>AI Recommendation</th>
+            <th>PA Choice</th>
+            <th>Team Decision (SA)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <span class="badge bg-dark fs-6">{{ ai_recommendation }}</span>
+            </td>
+            <td>
+              <span class="badge {% if pa_choice == ai_recommendation %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                {{ pa_choice }}
+              </span>
+            </td>
+            <td>
+              <span class="badge {% if sa_choice == ai_recommendation %}bg-success{% else %}bg-warning text-dark{% endif %} fs-6">
+                {{ sa_choice }}
+              </span>
+              {% if sa_choice == ai_recommendation %}
+                <br><small class="text-success">✓ Aligned with AI</small>
+              {% else %}
+                <br><small class="text-warning">≠ Diverged from AI</small>
+              {% endif %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if is_high %}
+  <!-- HIGH TRANSPARENCY: Δw values + dominant criterion + explanation -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-primary text-white">
+      Performance Gap Analysis (Δw)
+    </div>
+    <div class="card-body">
+
+      <!-- Δw explanation — clarifies what the score means -->
+      <div class="alert alert-light border border-primary mb-3">
+        <small>{{ dw_explanation }}</small>
+      </div>
+
+      <div class="row g-3 text-center">
+        <div class="col-md-6">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">Purchasing Criteria Gap (PA)</div>
+            <div class="fs-3 fw-bold {% if dw_pa == 0 %}text-success{% elif dw_pa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
+              Δw = {{ dw_pa }}
+            </div>
+            {% if dominant_pa %}
+            <div class="text-muted small mt-1">
+              Dominant gap: <strong>{{ dominant_pa }}</strong>
+            </div>
+            {% else %}
+            <div class="text-success small mt-1">No gap — optimal choice!</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded p-3">
+            <div class="text-muted small mb-1">CSR Criteria Gap (SA)</div>
+            <div class="fs-3 fw-bold {% if dw_sa == 0 %}text-success{% elif dw_sa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
+              Δw = {{ dw_sa }}
+            </div>
+            {% if dominant_sa %}
+            <div class="text-muted small mt-1">
+              Dominant gap: <strong>{{ dominant_sa }}</strong>
+            </div>
+            {% else %}
+            <div class="text-success small mt-1">No gap — optimal choice!</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Round Bonus ───────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold bg-info text-dark">
+      💶 Round {{ round_number }} Bonus
+    </div>
+    <div class="card-body text-center p-3">
+      <p class="text-muted small mb-2">
+        Your bonus is based on how close the team's decision was to the optimal supplier.
+        The closer, the higher the reward.
+      </p>
+      <div class="fs-2 fw-bold text-info">
+        €{{ round_bonus }}
+      </div>
+      <div class="text-muted small mt-1">
+        (Maximum per round: €{{ max_bonus }})
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AI Feedback Text ──────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header fw-semibold" style="background:#1a1a2e; color:#fff;">
+      🤖 AI System Feedback
+    </div>
+    <div class="card-body p-4">
+      {% if is_high %}
+        {% for paragraph in feedback_paragraphs %}
+          <p class="mb-3">{{ paragraph }}</p>
+        {% endfor %}
+      {% else %}
+        <p class="mb-0 text-muted">{{ feedback_text }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Next Round Note ───────────────────────────── -->
+  <div class="alert alert-light border text-center">
+    {% if round_number == 4 %}
+      This was the last feedback round. The final round will be followed by a short survey.
+    {% else %}
+      Round {{ next_round_number }} will begin next. Click <strong>Continue</strong> when ready.
+    {% endif %}
+  </div>
+
+  <div class="text-center">
+    {{ next_button }}
+  </div>
+
+</div>
+
+{{ endblock }}

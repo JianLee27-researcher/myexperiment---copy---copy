@@ -1,0 +1,104 @@
+{{ block title }}Round {{ round_number }}{{ endblock }}
+{{ block content }}
+
+<div class="container mt-5 text-center" style="max-width: 640px;">
+  <div class="card border-0 shadow-sm p-4">
+
+    <div class="mb-3">
+      <span style="font-size: 3rem;">🔄</span>
+    </div>
+
+    <h3 class="fw-bold mb-1">Round {{ round_number }} of 5</h3>
+    <p class="text-muted mb-4">
+      A new procurement cycle begins. The supplier pool remains the same.
+    </p>
+
+    <!-- ── Previous Round Summary (rounds 2–5 only) ──────────────── -->
+    {% if prev_round_data %}
+    <div class="card border-0 bg-light mb-4 text-start">
+      <div class="card-header fw-semibold bg-secondary text-white">
+        📊 Last Round Summary — Round {{ prev_round_data.round_number }}
+      </div>
+      <div class="card-body p-3">
+
+        <table class="table table-sm table-bordered text-center mb-3">
+          <thead class="table-dark">
+            <tr>
+              <th>AI Recommendation</th>
+              <th>PA Choice</th>
+              <th>Team Decision (SA)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="badge bg-dark">{{ prev_round_data.ai_rec }}</span>
+              </td>
+              <td>
+                <span class="badge {% if prev_round_data.pa_choice == prev_round_data.ai_rec %}bg-success{% else %}bg-secondary{% endif %}">
+                  {{ prev_round_data.pa_choice }}
+                </span>
+              </td>
+              <td>
+                <span class="badge {% if prev_round_data.optimal %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                  {{ prev_round_data.sa_choice }}
+                </span>
+                {% if prev_round_data.optimal %}
+                  <br><small class="text-success">✓ Optimal choice</small>
+                {% endif %}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="row g-2 text-center mb-2">
+          <div class="col-6">
+            <div class="border rounded p-2 bg-white">
+              <div class="text-muted small">PA Gap (Δw)</div>
+              <div class="fw-bold {% if prev_round_data.dw_pa == 0 %}text-success{% elif prev_round_data.dw_pa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
+                {{ prev_round_data.dw_pa }}
+              </div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="border rounded p-2 bg-white">
+              <div class="text-muted small">SA Gap (Δw)</div>
+              <div class="fw-bold {% if prev_round_data.dw_sa == 0 %}text-success{% elif prev_round_data.dw_sa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
+                {{ prev_round_data.dw_sa }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-center">
+          <span class="badge bg-info text-dark">
+            Round bonus: €{{ prev_round_data.round_bonus }}
+          </span>
+          <span class="badge
+            {% if prev_round_data.congruence == 'full' %}bg-success
+            {% elif prev_round_data.congruence == 'partial' %}bg-warning text-dark
+            {% else %}bg-danger{% endif %} ms-2">
+            Alignment: {{ prev_round_data.congruence }}
+          </span>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+    <!-- ── End Previous Round Summary ──────────────────────────────── -->
+
+    <div class="alert alert-light border text-start mb-4">
+      <strong>Reminder — Process this round:</strong>
+      <ol class="mb-0 mt-2">
+        <li>The AI system provides its recommendation.</li>
+        <li>The <strong>Purchasing Analyst</strong> reviews it and submits their choice.</li>
+        <li>The <strong>Sustainability Analyst</strong> makes the final team decision.</li>
+      </ol>
+    </div>
+
+    {{ next_button }}
+
+  </div>
+</div>
+
+{{ endblock }}
