@@ -390,6 +390,7 @@ class Group(BaseGroup):
 
         self.round_bonus = compute_distance_bonus(dw_pa, dw_sa)
 
+        # 🛡️ 안전장치: group.transparency가 비어있으면 session config에서 가져옴
         transparency_val = self.transparency or self.session.config.get('transparency', 'low')
 
         self.ai_feedback_text = build_feedback_text(
@@ -804,7 +805,7 @@ class AIRecommendation(Page):
     @staticmethod
     def vars_for_template(player):
         group        = player.group
-        transparency = group.transparency
+        transparency = group.transparency or player.session.config.get('transparency', 'low')
         ai_rec       = group.ai_recommendation
         rnd          = player.round_number
 
@@ -850,7 +851,7 @@ class SADecision(Page):
     @staticmethod
     def vars_for_template(player):
         group        = player.group
-        transparency = group.transparency
+        transparency = group.transparency or player.session.config.get('transparency', 'low')
 
         score_rows = []
         for sup in SUPPLIERS:
@@ -904,6 +905,7 @@ class RoundFeedback(Page):
     @staticmethod
     def vars_for_template(player):
         group = player.group
+        transparency_val = group.transparency or player.session.config.get('transparency', 'low')
         return {
             'round_number':      player.round_number,
             'next_round_number': player.round_number + 1,
@@ -916,8 +918,8 @@ class RoundFeedback(Page):
             'dominant_sa':       group.dominant_criterion_sa,
             'feedback_text':     group.ai_feedback_text,
             'feedback_paragraphs': [p for p in group.ai_feedback_text.split('\n\n') if p.strip()],
-            'transparency':      group.transparency,
-            'is_high':           group.transparency == 'high',
+            'transparency':      transparency_val,
+            'is_high':           transparency_val == 'high',
             'congruence_all':    group.congruence_all,
             'congruence_ai_pa':  group.congruence_ai_pa,
             'congruence_ai_sa':  group.congruence_ai_sa,
@@ -997,6 +999,9 @@ class Results(Page):
 
         optimal_rounds = sum(1 for p in all_rounds if p.group.sa_choice == OPTIMAL_SUPPLIER)
 
+        # 🛡️ 안전장치: group.transparency가 비어있으면 session.config에서 가져옴
+        transparency_val = player.group.transparency or player.session.config.get('transparency', 'low')
+
         round_summary = []
         for p in all_rounds:
             g = p.group
@@ -1016,7 +1021,7 @@ class Results(Page):
             })
 
         return {
-            'transparency':       player.group.transparency,
+            'transparency':       transparency_val,
             'optimal_rounds':     optimal_rounds,
             'bonus_per_round':   MAX_BONUS_PER_ROUND,
             'performance_bonus': total_bonus,
