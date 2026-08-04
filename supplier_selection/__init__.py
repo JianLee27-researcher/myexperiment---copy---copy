@@ -63,12 +63,6 @@ ERROR_SUPPLIER   = 'E'
 AI_ACCURACY      = 0.70
 SUPPLIERS        = ['A', 'B', 'C', 'D', 'E', 'F']
 
-# Distance-based payoff constants
-# Maximum theoretical Δw across both perspectives, used to normalise bonus.
-# Computed from SUPPLIER_DATA: worst-case team choice vs optimal.
-# PA perspective: Supplier E vs A  →  Δw_PA_MAX
-# SA perspective: Supplier E vs A  →  Δw_SA_MAX
-# We use the average of the two as the normalisation denominator.
 DW_PA_MAX = round(
     sum(abs(SUPPLIER_DATA[OPTIMAL_SUPPLIER]['pa'][c] - SUPPLIER_DATA['E']['pa'][c]) * w
         for c, w in AI_WEIGHTS_PA.items()), 4)
@@ -77,9 +71,9 @@ DW_SA_MAX = round(
     sum(abs(SUPPLIER_DATA[OPTIMAL_SUPPLIER]['sa'][c] - SUPPLIER_DATA['E']['sa'][c]) * w
         for c, w in AI_WEIGHTS_SA.items()), 4)
 
-DW_MAX = round((DW_PA_MAX + DW_SA_MAX) / 2, 4)   # combined normalisation base
+DW_MAX = round((DW_PA_MAX + DW_SA_MAX) / 2, 4)
 
-MAX_BONUS_PER_ROUND = 0.20   # € maximum bonus per round (Δw = 0)
+MAX_BONUS_PER_ROUND = 0.20
 
 
 # ─────────────────────────────────────────────
@@ -248,29 +242,12 @@ SA_FEEDBACK_AI_E = {
 # ─────────────────────────────────────────────
 
 def get_ai_recommendation(accuracy_mode='fixed'):
-    """
-    Wizard-of-Oz AI recommendation.
-
-    accuracy_mode='fixed' (recommended):
-        Called EACH ROUND independently — 70% chance per round.
-        True average 70% accuracy. NOT a manipulation.
-        Prevents participants detecting a fixed pattern.
-
-    accuracy_mode='manipulation':
-        Called ONCE in Round 1, fixed for all 5 rounds.
-        70% sessions always correct, 30% always wrong.
-        De facto between-subjects manipulation of AI accuracy.
-    """
     if random.random() < AI_ACCURACY:
         return OPTIMAL_SUPPLIER
     return ERROR_SUPPLIER
 
 
 def compute_dw(team_choice: str, perspective: str) -> tuple:
-    """
-    Weighted distance (Δw) between OPTIMAL_SUPPLIER and the team's choice.
-    Returns (dw: float, dominant_criterion: str)
-    """
     weights = AI_WEIGHTS_PA if perspective == 'pa' else AI_WEIGHTS_SA
     opt_sc  = SUPPLIER_DATA[OPTIMAL_SUPPLIER][perspective]
     team_sc = SUPPLIER_DATA[team_choice][perspective]
@@ -282,12 +259,6 @@ def compute_dw(team_choice: str, perspective: str) -> tuple:
 
 
 def compute_distance_bonus(dw_pa: float, dw_sa: float) -> float:
-    """
-    Distance-based bonus per round.
-    bonus = MAX_BONUS_PER_ROUND × (1 − combined_dw / DW_MAX)
-    combined_dw = average of dw_pa and dw_sa.
-    Clipped to [0, MAX_BONUS_PER_ROUND].
-    """
     if DW_MAX == 0:
         return MAX_BONUS_PER_ROUND
     combined_dw = (dw_pa + dw_sa) / 2
@@ -340,7 +311,6 @@ class C(BaseConstants):
     PA_ID   = 1
     SA_ID   = 2
 
-    # Explanation shown on RoundFeedback about what Δw means.
     DW_EXPLANATION = (
         "This score shows how far the team's final choice is from the theoretically "
         "optimal supplier — not how much the Purchasing Analyst and Sustainability "
@@ -348,7 +318,6 @@ class C(BaseConstants):
         "the best possible outcome."
     )
 
-    # Explanation shown on Briefing about why rounds repeat.
     ROUND_REPEAT_RATIONALE = (
         "You will go through 5 rounds using the same set of suppliers. "
         "Each round, you and your partner make independent decisions. "
@@ -362,21 +331,17 @@ class Subsession(BaseSubsession):
         transparency   = self.session.config.get('transparency',   'high')
         ai_position    = self.session.config.get('ai_position',    'first')
         accuracy_mode  = self.session.config.get('accuracy_mode',  'fixed')
-        # sync=True  → WaitPages active (lab / synchronous)
-        # sync=False → WaitPages skipped (online / asynchronous)
         sync           = self.session.config.get('sync',           True)
 
         if accuracy_mode == 'manipulation':
-            # Draw ONCE per session (Round 1), keep fixed for all rounds
             if self.round_number == 1:
                 ai_rec = get_ai_recommendation(accuracy_mode)
                 self.session.vars['ai_recommendation'] = ai_rec
             else:
                 ai_rec = self.session.vars.get('ai_recommendation', OPTIMAL_SUPPLIER)
         else:
-            # 'fixed': draw independently each round → true 70% average
             ai_rec = get_ai_recommendation(accuracy_mode)
-            self.session.vars['ai_recommendation'] = ai_rec  # overwrite each round
+            self.session.vars['ai_recommendation'] = ai_rec
 
         for group in self.get_groups():
             group.transparency   = transparency
@@ -385,10 +350,9 @@ class Subsession(BaseSubsession):
 
 
 class Group(BaseGroup):
-    transparency      = models.StringField(initial='high')
-    ai_position       = models.StringField(initial='first')   # 'first' | 'middle'
+    transparency      = models.StringField(initial='')
+    ai_position       = models.StringField(initial='first')
     ai_recommendation = models.StringField(initial='')
-    # For 'middle' position: PA makes initial choice before seeing AI
     pa_initial_choice = models.StringField(initial='')
 
     pa_choice = models.StringField(
@@ -411,7 +375,7 @@ class Group(BaseGroup):
     congruence_all   = models.StringField(initial='')
 
     ai_feedback_text  = models.LongStringField(initial='')
-    round_bonus       = models.FloatField(initial=0.0)  # distance-based bonus this round
+    round_bonus       = models.FloatField(initial=0.0)
 
     def set_performance(self):
         team_choice = self.sa_choice
@@ -426,10 +390,12 @@ class Group(BaseGroup):
 
         self.round_bonus = compute_distance_bonus(dw_pa, dw_sa)
 
+        transparency_val = self.transparency or self.session.config.get('transparency', 'low')
+
         self.ai_feedback_text = build_feedback_text(
             ai_recommendation=self.ai_recommendation,
             sa_choice=team_choice,
-            transparency=self.transparency,
+            transparency=transparency_val,
             dw_pa=dw_pa, dom_pa=dom_pa,
             dw_sa=dw_sa, dom_sa=dom_sa,
         )
@@ -438,7 +404,6 @@ class Group(BaseGroup):
 class Player(BasePlayer):
     role_label = models.StringField()
 
-    # ── INFORMED CONSENT (Round 1 only, recorded with oTree timestamp) ──────
     consent_given = models.BooleanField(
         label=(
             "I have read and understood the consent form above. "
@@ -449,9 +414,6 @@ class Player(BasePlayer):
         widget=widgets.CheckboxInput,
     )
 
-    # ── BASELINE TRUST (measured before experiment, Round 1 only) ──────────
-
-    # [A] General AI trust — 3 items, 7-pt Likert
     baseline_ai_trust_1 = models.IntegerField(
         label="In general, I trust AI-based recommendation systems to provide accurate information.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -462,7 +424,6 @@ class Player(BasePlayer):
         label="I am comfortable relying on AI tools when making important decisions.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # [B] Domain knowledge self-assessment — 2 items, 7-pt
     baseline_domain_procurement = models.IntegerField(
         label="How familiar are you with B2B procurement processes?",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -470,7 +431,6 @@ class Player(BasePlayer):
         label="How familiar are you with ESG/CSR criteria in supplier evaluation?",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # [C] AI experience — 2 items
     baseline_ai_frequency = models.IntegerField(
         label="How often do you use AI tools in your work or studies?",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -479,9 +439,6 @@ class Player(BasePlayer):
         choices=[['yes', 'Yes'], ['no', 'No']],
         widget=widgets.RadioSelect)
 
-    # ── McKnight et al. (2011) — POST-EXPERIMENT TRUST ──────────────────────
-
-    # Reliability (4 items, 7-pt)
     trust_reliability_1 = models.IntegerField(
         label="The AI system is a very reliable source of recommendations.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -495,7 +452,6 @@ class Player(BasePlayer):
         label="The AI system does not malfunction for me.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # Functionality (3 items, 7-pt)
     trust_functionality_1 = models.IntegerField(
         label="The AI system has the functionality I need.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -506,7 +462,6 @@ class Player(BasePlayer):
         label="The AI system has the ability to do what I want it to do.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # Helpfulness (4 items, 7-pt)
     trust_helpfulness_1 = models.IntegerField(
         label="The AI system supplies the help I need through its recommendations.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
@@ -520,11 +475,6 @@ class Player(BasePlayer):
         label="The AI system provides very sensible and effective advice.",
         choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
 
-    # ── Exploratory items — with N/A option (0) ──────────────────────────────
-    # N/A = 0 is stored as integer; HTML should label 0 as "I could not assess this".
-    # These items are NOT part of the McKnight validated scale.
-
-    # Team trust (Cazier et al., 2007)
     trust_team_1 = models.IntegerField(
         label="Overall, I trust this team.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
@@ -534,7 +484,6 @@ class Player(BasePlayer):
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
         widget=widgets.RadioSelectHorizontal)
 
-    # Interpersonal trust (Mayer et al., 1995)
     trust_interpersonal_1 = models.IntegerField(
         label="My human team member is very capable of performing their job.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
@@ -544,7 +493,6 @@ class Player(BasePlayer):
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
         widget=widgets.RadioSelectHorizontal)
 
-    # Transparency manipulation check (5-pt + N/A)
     mc_transparency_1 = models.IntegerField(
         label="The AI system provided a clear explanation of how it reached its recommendation.",
         choices=[0, 1, 2, 3, 4, 5],
@@ -554,9 +502,6 @@ class Player(BasePlayer):
         choices=[0, 1, 2, 3, 4, 5],
         widget=widgets.RadioSelectHorizontal)
 
-    # ── Comprehension Check (Round 1, after Briefing) ────────────────────────
-    # Correct answers: cq1='c', cq2='b', cq3='b'
-    # Wrong answers recorded but do not block participation (recording mode).
     comprehension_q1 = models.StringField(
         label="In this task, who makes the final supplier selection?",
         choices=[
@@ -587,10 +532,8 @@ class Player(BasePlayer):
         ],
         widget=widgets.RadioSelect,
     )
-    # Derived field: number of correct answers (0–3), set in before_next_page
     comprehension_score = models.IntegerField(initial=0)
 
-    # ── Demographics ─────────────────────────────────────────────────────────
     age = models.IntegerField(label="Your age", min=18, max=80)
     gender = models.StringField(
         label="Your gender",
@@ -636,12 +579,6 @@ class Consent(Page):
 
 
 class BaselineTrust(Page):
-    """
-    NEW — Baseline Trust measurement.
-    Displayed once before Briefing (Round 1 only).
-    Measures: general AI trust, domain knowledge, AI experience.
-    Used to compare with post-experiment TrustSurvey.
-    """
     @staticmethod
     def is_displayed(player): return is_round_1(player)
 
@@ -674,12 +611,6 @@ class BaselineTrust(Page):
 
 
 class ComprehensionCheck(Page):
-    """
-    Comprehension check — shown once after Briefing (Round 1 only).
-    Recording mode: wrong answers do not block participation.
-    comprehension_score (0–3) recorded for use as covariate in analysis.
-    Correct answers: Q1=c, Q2=b, Q3=b
-    """
     @staticmethod
     def is_displayed(player): return is_round_1(player)
 
@@ -704,21 +635,7 @@ class ComprehensionCheck(Page):
         return {'round_number': player.round_number}
 
 
-    @staticmethod
-    def is_displayed(player): return is_round_1(player)
-
-    @staticmethod
-    def vars_for_template(player):
-        role = C.ROLE_PA if is_pa(player) else C.ROLE_SA
-        player.role_label = role
-        return {'role': role, 'is_pa': is_pa(player)}
-
-
 class RoleAssignment(Page):
-    """
-    Shown once (Round 1 only). Assigns and displays the participant's role
-    (Purchasing Analyst or Sustainability Analyst) and sets role_label in DB.
-    """
     @staticmethod
     def is_displayed(player): return is_round_1(player)
 
@@ -761,16 +678,11 @@ class Briefing(Page):
             'sa_rows':               sa_rows,
             'ai_weights_pa':         AI_WEIGHTS_PA,
             'ai_weights_sa':         AI_WEIGHTS_SA,
-            # Briefing now includes the round-repetition rationale
             'round_repeat_rationale': C.ROUND_REPEAT_RATIONALE,
         }
 
 
 class RoundIntro(Page):
-    """
-    UPDATED — Now shows previous round summary for rounds 2–5.
-    Round 1 shows no previous data (handled in template with is_round_1 check).
-    """
     @staticmethod
     def is_displayed(player): return is_not_round_1(player)
 
@@ -798,12 +710,6 @@ class RoundIntro(Page):
             'is_pa':           is_pa(player),
         }
 
-
-# ─────────────────────────────────────────────
-# SYNC WAIT PAGES (active when sync=True in settings)
-# When sync=False these pages are still in page_sequence
-# but is_displayed returns False for everyone → effectively skipped.
-# ─────────────────────────────────────────────
 
 def is_sync(player):
     return player.session.config.get('sync', True)
@@ -837,12 +743,6 @@ class RoundIntroWaitPage(WaitPage):
 
 
 class PAInitialDecision(Page):
-    """
-    MIDDLE POSITION ONLY: PA makes an initial supplier choice BEFORE seeing the AI.
-    This initial choice is stored as pa_initial_choice.
-    PA then proceeds to AIRecommendation where they see AI and revise (or confirm).
-    Structure: PA(initial) → AI → PA(revised) → SA
-    """
     @staticmethod
     def is_displayed(player):
         return is_pa(player) and is_position_middle(player)
@@ -871,10 +771,6 @@ class PAInitialDecision(Page):
 
 
 class SAWaitForPAInitial(WaitPage):
-    """
-    MIDDLE position + sync=True only.
-    SA waits while PA makes the initial choice (PAInitialDecision).
-    """
     @staticmethod
     def is_displayed(player):
         return is_sa(player) and is_sync(player) and is_position_middle(player)
@@ -883,10 +779,6 @@ class SAWaitForPAInitial(WaitPage):
 
 
 class SAWaitForPA(WaitPage):
-    """
-    Active when sync=True (lab).
-    SA waits while PA reviews AI recommendation and submits final choice.
-    """
     @staticmethod
     def is_displayed(player):
         return is_sa(player) and is_sync(player)
@@ -895,7 +787,6 @@ class SAWaitForPA(WaitPage):
 
 
 class PAWaitForSA(WaitPage):
-    """Active when sync=True (lab). SA is making the final supplier selection."""
     @staticmethod
     def is_displayed(player):
         return is_pa(player) and is_sync(player)
@@ -917,7 +808,6 @@ class AIRecommendation(Page):
         ai_rec       = group.ai_recommendation
         rnd          = player.round_number
 
-        # 🛡️ 안전장치: group.ai_recommendation이 없으면 session.vars나 기본값 'A' 지정
         if not ai_rec:
             ai_rec = player.session.vars.get('ai_recommendation', 'A')
             group.ai_recommendation = ai_rec
@@ -938,7 +828,7 @@ class AIRecommendation(Page):
 
         return {
             'transparency':       transparency,
-            'ai_recommendation':  ai_rec,  # 👈 템플릿 전달
+            'ai_recommendation':  ai_rec,
             'round_explanation':  round_explanation,
             'score_rows':         score_rows,
             'ai_weights_pa':      AI_WEIGHTS_PA,
@@ -951,11 +841,6 @@ class AIRecommendation(Page):
 
 
 class SADecision(Page):
-    """
-    ASYNC: SA accesses this page independently after receiving notification that PA has submitted.
-    SA sees PA's choice + their own CSR score table.
-    AI recommendation is intentionally NOT passed — sequential AI→PA→SA structure.
-    """
     @staticmethod
     def is_displayed(player): return is_sa(player)
 
@@ -1013,12 +898,6 @@ class SADecision(Page):
 
 
 class RoundFeedback(Page):
-    """
-    Shown after each round (rounds 1–4).
-    UPDATED: Δw explanation text now passed as template variable.
-    Both PA and SA see this page — no wait page required in async structure.
-    Note: in async mode, PA and SA may view this at different times.
-    """
     @staticmethod
     def is_displayed(player): return is_not_last_round(player)
 
@@ -1045,18 +924,11 @@ class RoundFeedback(Page):
             'congruence_pa_sa':  group.congruence_pa_sa,
             'round_bonus':       group.round_bonus,
             'max_bonus':         MAX_BONUS_PER_ROUND,
-            # Δw explanation — replaces need for participants to infer meaning
             'dw_explanation':    C.DW_EXPLANATION,
         }
 
 
 class TrustSurvey(Page):
-    """
-    Post-experiment trust survey (Round 5 only).
-    UPDATED: SA-specific intro text acknowledges SA did not interact with AI directly.
-    McKnight items (reliability/functionality/helpfulness) unchanged — 7-pt, no N/A.
-    Exploratory items (team/interpersonal/mc_transparency) include N/A (value=0).
-    """
     @staticmethod
     def is_displayed(player): return is_last_round(player)
 
@@ -1074,7 +946,6 @@ class TrustSurvey(Page):
 
     @staticmethod
     def vars_for_template(player):
-        # SA-specific intro acknowledges indirect AI exposure
         if is_sa(player):
             survey_intro = (
                 "As the Sustainability Analyst, you did not interact with the AI system directly. "
@@ -1090,12 +961,10 @@ class TrustSurvey(Page):
         return {
             'scale_7':       list(range(1, 8)),
             'scale_5':       list(range(1, 6)),
-            # N/A choices for exploratory items: 0 = "I could not assess this"
             'scale_7_na':    [0] + list(range(1, 8)),
             'scale_5_na':    [0] + list(range(1, 6)),
             'survey_intro':  survey_intro,
             'is_sa':         is_sa(player),
-            # Reminder: similar-looking questions measure different dimensions
             'scale_note': (
                 "Note: some questions may appear similar. Each item measures "
                 "a distinct aspect of trust. Please respond to each one separately."
@@ -1113,15 +982,8 @@ class Demographics(Page):
 
 class Results(Page):
     @staticmethod
-    def is_displayed(player): return is_last_round(player)
-
-    @staticmethod
-    def before_next_page(player, timeout_happened):
-        if is_last_round(player):
-            total_bonus = sum(
-                (p.group.round_bonus or 0.0) for p in player.in_all_rounds()
-            )
-            player.payoff = round(total_bonus, 2)
+    def is_displayed(player): 
+        return is_last_round(player)
 
     @staticmethod
     def vars_for_template(player):
@@ -1131,7 +993,8 @@ class Results(Page):
         cumulative_dw_sa = round(sum((p.group.dw_sa or 0.0) for p in all_rounds), 4)
         total_bonus      = round(sum((p.group.round_bonus or 0.0) for p in all_rounds), 2)
 
-        # Results.html 템플릿 맞춤 변수 계산
+        player.payoff = total_bonus
+
         optimal_rounds = sum(1 for p in all_rounds if p.group.sa_choice == OPTIMAL_SUPPLIER)
 
         round_summary = []
@@ -1154,62 +1017,17 @@ class Results(Page):
 
         return {
             'transparency':       player.group.transparency,
-            'optimal_rounds':     optimal_rounds,         # 👈 Results.html 필수 변수
-            'bonus_per_round':   MAX_BONUS_PER_ROUND,     # 👈 Results.html 필수 변수
-            'performance_bonus': total_bonus,             # 👈 Results.html 필수 변수
+            'optimal_rounds':     optimal_rounds,
+            'bonus_per_round':   MAX_BONUS_PER_ROUND,
+            'performance_bonus': total_bonus,
             'cumulative_dw_pa':  cumulative_dw_pa,
             'cumulative_dw_sa':  cumulative_dw_sa,
             'round_summary':     round_summary,
         }
-# ─────────────────────────────────────────────
-# 8. PAGE SEQUENCE
-# ─────────────────────────────────────────────
-#
-# ASYNC STRUCTURE — WaitPages removed:
-#   BriefingWaitPage    → removed (PA and SA read Briefing independently)
-#   SAWaitForPA         → removed (SA accesses SADecision after notification)
-#   PAWaitForSA         → removed (PA proceeds to RoundFeedback independently)
-#   RoundIntroWaitPage  → removed
-#
-# Notification mechanism (PA→SA handoff) must be handled externally:
-#   Option A: Email trigger when PA submits AIRecommendation page
-#   Option B: Shared dashboard where SA sees PA's submission status
-#   Option C: Researcher monitors admin panel and sends SA link manually
-#
-# oTree admin panel: monitor session to confirm both players have completed
-# each round before advancing to the next session-level step.
 
 # ─────────────────────────────────────────────
 # 8. PAGE SEQUENCE
 # ─────────────────────────────────────────────
-#
-# All condition branches are in a single sequence.
-# is_displayed() controls what each participant sees.
-#
-# SYNC / ASYNC (controlled by settings 'sync': True|False):
-#   sync=True  → BriefingWaitPage, SAWaitForPA, PAWaitForSA, RoundIntroWaitPage shown
-#   sync=False → those WaitPages return is_displayed=False → effectively skipped
-#
-# AI POSITION (controlled by settings 'ai_position': 'first'|'middle'):
-#   'first'  → PAInitialDecision skipped (is_displayed=False)
-#              sequence: AI → PA(choice) → SA
-#   'middle' → PAInitialDecision shown to PA before AIRecommendation
-#              sequence: PA(initial) → AI → PA(revised choice) → SA
-#
-# ACCURACY MODE (controlled by settings 'accuracy_mode': 'fixed'|'manipulation'):
-#   'fixed'       → ai_recommendation redrawn each round in creating_session
-#   'manipulation'→ ai_recommendation fixed for all rounds from Round 1
-#   (no page-level change — handled entirely in creating_session)
-#
-# ACTIVE SETTINGS COMBINATIONS:
-#   Lab  / first  / fixed        → sync=True,  ai_position='first',  accuracy_mode='fixed'
-#   Lab  / middle / fixed        → sync=True,  ai_position='middle', accuracy_mode='fixed'
-#   Lab  / first  / manipulation → sync=True,  ai_position='first',  accuracy_mode='manipulation'
-#   Lab  / middle / manipulation → sync=True,  ai_position='middle', accuracy_mode='manipulation'
-#   Online/first  / fixed        → sync=False, ai_position='first',  accuracy_mode='fixed'
-#   Online/middle / fixed        → sync=False, ai_position='middle', accuracy_mode='fixed'
-#   Online/first  / manipulation → sync=False, ai_position='first',  accuracy_mode='manipulation'
-#   Online/middle / manipulation → sync=False, ai_position='middle', accuracy_mode='manipulation'
 
 page_sequence = [
     Consent,
