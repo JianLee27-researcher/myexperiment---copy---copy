@@ -1131,6 +1131,9 @@ class Results(Page):
         cumulative_dw_sa = round(sum((p.group.dw_sa or 0.0) for p in all_rounds), 4)
         total_bonus      = round(sum((p.group.round_bonus or 0.0) for p in all_rounds), 2)
 
+        # Results.html 템플릿 맞춤 변수 계산
+        optimal_rounds = sum(1 for p in all_rounds if p.group.sa_choice == OPTIMAL_SUPPLIER)
+
         round_summary = []
         for p in all_rounds:
             g = p.group
@@ -1150,16 +1153,14 @@ class Results(Page):
             })
 
         return {
+            'transparency':       player.group.transparency,
+            'optimal_rounds':     optimal_rounds,         # 👈 Results.html 필수 변수
+            'bonus_per_round':   MAX_BONUS_PER_ROUND,     # 👈 Results.html 필수 변수
+            'performance_bonus': total_bonus,             # 👈 Results.html 필수 변수
             'cumulative_dw_pa':  cumulative_dw_pa,
             'cumulative_dw_sa':  cumulative_dw_sa,
             'round_summary':     round_summary,
-            'transparency':      player.group.transparency,
-            'total_bonus':       total_bonus,
-            'max_total_bonus':   round(MAX_BONUS_PER_ROUND * C.NUM_ROUNDS, 2),
-            'bonus_per_round':   MAX_BONUS_PER_ROUND,
-            'dw_max':            DW_MAX,
         }
-
 # ─────────────────────────────────────────────
 # 8. PAGE SEQUENCE
 # ─────────────────────────────────────────────
