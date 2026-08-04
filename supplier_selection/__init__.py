@@ -328,11 +328,15 @@ class C(BaseConstants):
 
 class Subsession(BaseSubsession):
     def creating_session(self):
-        print(f"DEBUG creating_session called — round {self.round_number}")
         transparency   = self.session.config.get('transparency',   'high')
         ai_position    = self.session.config.get('ai_position',    'first')
         accuracy_mode  = self.session.config.get('accuracy_mode',  'fixed')
         sync           = self.session.config.get('sync',           True)
+
+        # 🔍 TEMP DEBUG — records every time creating_session() actually runs
+        # in this session, and what ai_rec was drawn each time.
+        # Remove this block once the AAAAA investigation is resolved.
+        calls = self.session.vars.get('debug_creating_session_calls', [])
 
         if accuracy_mode == 'manipulation':
             if self.round_number == 1:
@@ -343,6 +347,9 @@ class Subsession(BaseSubsession):
         else:
             ai_rec = get_ai_recommendation(accuracy_mode)
             self.session.vars['ai_recommendation'] = ai_rec
+
+        calls.append({'round': self.round_number, 'ai_rec': ai_rec})
+        self.session.vars['debug_creating_session_calls'] = calls
 
         for group in self.get_groups():
             group.transparency   = transparency
@@ -828,6 +835,11 @@ class AIRecommendation(Page):
                 'pa_total':   round(pa_total, 3),
             })
 
+        # 🔍 TEMP DEBUG — surface creating_session() call history directly on
+        # the page so it can be checked without server logs / CLI access.
+        # Remove this block once the AAAAA investigation is resolved.
+        debug_calls = player.session.vars.get('debug_creating_session_calls', [])
+
         return {
             'transparency':       transparency,
             'ai_recommendation':  ai_rec,
@@ -839,6 +851,7 @@ class AIRecommendation(Page):
             'ai_position':        group.ai_position,
             'is_middle':          group.ai_position == 'middle',
             'pa_initial_choice':  group.pa_initial_choice,
+            'debug_calls':        debug_calls,
         }
 
 

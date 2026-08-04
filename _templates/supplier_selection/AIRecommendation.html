@@ -153,6 +153,19 @@
     </div>
   </details>
 
+  <!-- 🔍 TEMP DEBUG BOX — remove once AAAAA investigation is resolved -->
+  <div class="alert alert-warning small mb-4">
+    <strong>DEBUG — creating_session() call history this session:</strong><br>
+    {% if debug_calls %}
+      {% for c in debug_calls %}
+        round {{ c.round }} → ai_rec = {{ c.ai_rec }}<br>
+      {% endfor %}
+      <strong>Total calls so far: {{ debug_calls|length }}</strong>
+    {% else %}
+      (no calls recorded — debug_calls is empty)
+    {% endif %}
+  </div>
+
   <!-- PA Decision Form -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold bg-primary text-white">
