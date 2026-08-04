@@ -1117,13 +1117,9 @@ class Results(Page):
 
     @staticmethod
     def before_next_page(player, timeout_happened):
-        """
-        Distance-based payoff: sum of per-round bonuses across all 5 rounds.
-        Max = 5 × €0.20 = €1.00
-        """
         if is_last_round(player):
             total_bonus = sum(
-                p.group.round_bonus for p in player.in_all_rounds()
+                (p.group.round_bonus or 0.0) for p in player.in_all_rounds()
             )
             player.payoff = round(total_bonus, 2)
 
@@ -1131,26 +1127,27 @@ class Results(Page):
     def vars_for_template(player):
         all_rounds = player.in_all_rounds()
 
-        cumulative_dw_pa = round(sum(p.group.dw_pa for p in all_rounds), 4)
-        cumulative_dw_sa = round(sum(p.group.dw_sa for p in all_rounds), 4)
-        total_bonus      = round(sum(p.group.round_bonus for p in all_rounds), 2)
+        cumulative_dw_pa = round(sum((p.group.dw_pa or 0.0) for p in all_rounds), 4)
+        cumulative_dw_sa = round(sum((p.group.dw_sa or 0.0) for p in all_rounds), 4)
+        total_bonus      = round(sum((p.group.round_bonus or 0.0) for p in all_rounds), 2)
 
-        round_summary = [
-            {
+        round_summary = []
+        for p in all_rounds:
+            g = p.group
+            sa_choice = g.sa_choice or ''
+            round_summary.append({
                 'round':       p.round_number,
-                'ai_rec':      p.group.ai_recommendation,
-                'pa_choice':   p.group.pa_choice,
-                'sa_choice':   p.group.sa_choice,
-                'dw_pa':       p.group.dw_pa,
-                'dw_sa':       p.group.dw_sa,
-                'dom_pa':      p.group.dominant_criterion_pa,
-                'dom_sa':      p.group.dominant_criterion_sa,
-                'congruence':  p.group.congruence_all,
-                'round_bonus': p.group.round_bonus,
-                'optimal':     p.group.sa_choice == OPTIMAL_SUPPLIER,
-            }
-            for p in all_rounds
-        ]
+                'ai_rec':      g.ai_recommendation or '',
+                'pa_choice':   g.pa_choice or '',
+                'sa_choice':   sa_choice,
+                'dw_pa':       g.dw_pa or 0.0,
+                'dw_sa':       g.dw_sa or 0.0,
+                'dom_pa':      g.dominant_criterion_pa or '',
+                'dom_sa':      g.dominant_criterion_sa or '',
+                'congruence':  g.congruence_all or '',
+                'round_bonus': g.round_bonus or 0.0,
+                'optimal':     sa_choice == OPTIMAL_SUPPLIER if sa_choice else False,
+            })
 
         return {
             'cumulative_dw_pa':  cumulative_dw_pa,
@@ -1162,7 +1159,6 @@ class Results(Page):
             'bonus_per_round':   MAX_BONUS_PER_ROUND,
             'dw_max':            DW_MAX,
         }
-
 
 # ─────────────────────────────────────────────
 # 8. PAGE SEQUENCE
