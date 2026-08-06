@@ -157,6 +157,16 @@
   <div class="alert alert-warning small mb-4">
     <strong>BUILD TAG: {{ debug_build_tag }}</strong>
     (if this text is blank or missing, the new code was NOT deployed)<br><br>
+
+    <strong>debug_entry_count (creating_session entered, before any logic):</strong>
+    {{ debug_entry_count }}<br>
+    <strong>debug_last_entry_round:</strong> {{ debug_last_entry_round }}<br><br>
+
+    {% if debug_error %}
+    <strong style="color:red;">EXCEPTION CAUGHT IN creating_session():</strong><br>
+    <pre style="white-space: pre-wrap; font-size: 11px;">{{ debug_error }}</pre>
+    {% endif %}
+
     <strong>DEBUG — creating_session() call history this session:</strong><br>
     {% if debug_calls %}
       {% for c in debug_calls %}

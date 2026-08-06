@@ -77,7 +77,7 @@ MAX_BONUS_PER_ROUND = 0.20
 
 # 🔍 TEMP DEBUG — bump this string any time you redeploy, to confirm
 # on-screen whether the new code actually went live. Remove when done.
-DEBUG_BUILD_TAG = 'debug-build-03'
+DEBUG_BUILD_TAG = 'debug-build-04'
 
 
 # ─────────────────────────────────────────────
@@ -332,33 +332,48 @@ class C(BaseConstants):
 
 class Subsession(BaseSubsession):
     def creating_session(self):
-        transparency   = self.session.config.get('transparency',   'high')
-        ai_position    = self.session.config.get('ai_position',    'first')
-        accuracy_mode  = self.session.config.get('accuracy_mode',  'fixed')
-        sync           = self.session.config.get('sync',           True)
+        # 🔍 TEMP DEBUG — absolute first line, before anything else can fail.
+        # If this counter still doesn't show up, creating_session() is not
+        # being entered at all (or session.vars writes aren't persisting).
+        entry_count = self.session.vars.get('debug_entry_count', 0) + 1
+        self.session.vars['debug_entry_count'] = entry_count
+        self.session.vars['debug_last_entry_round'] = self.round_number
 
-        # 🔍 TEMP DEBUG — records every time creating_session() actually runs
-        # in this session, and what ai_rec was drawn each time.
-        # Remove this block once the AAAAA investigation is resolved.
-        calls = self.session.vars.get('debug_creating_session_calls', [])
+        debug_error = None
+        try:
+            transparency   = self.session.config.get('transparency',   'high')
+            ai_position    = self.session.config.get('ai_position',    'first')
+            accuracy_mode  = self.session.config.get('accuracy_mode',  'fixed')
+            sync           = self.session.config.get('sync',           True)
 
-        if accuracy_mode == 'manipulation':
-            if self.round_number == 1:
+            # 🔍 TEMP DEBUG — records every time creating_session() actually runs
+            # in this session, and what ai_rec was drawn each time.
+            # Remove this block once the AAAAA investigation is resolved.
+            calls = self.session.vars.get('debug_creating_session_calls', [])
+
+            if accuracy_mode == 'manipulation':
+                if self.round_number == 1:
+                    ai_rec = get_ai_recommendation(accuracy_mode)
+                    self.session.vars['ai_recommendation'] = ai_rec
+                else:
+                    ai_rec = self.session.vars.get('ai_recommendation', OPTIMAL_SUPPLIER)
+            else:
                 ai_rec = get_ai_recommendation(accuracy_mode)
                 self.session.vars['ai_recommendation'] = ai_rec
-            else:
-                ai_rec = self.session.vars.get('ai_recommendation', OPTIMAL_SUPPLIER)
-        else:
-            ai_rec = get_ai_recommendation(accuracy_mode)
-            self.session.vars['ai_recommendation'] = ai_rec
 
-        calls.append({'round': self.round_number, 'ai_rec': ai_rec})
-        self.session.vars['debug_creating_session_calls'] = calls
+            calls.append({'round': self.round_number, 'ai_rec': ai_rec})
+            self.session.vars['debug_creating_session_calls'] = calls
 
-        for group in self.get_groups():
-            group.transparency   = transparency
-            group.ai_position    = ai_position
-            group.ai_recommendation = ai_rec
+            for group in self.get_groups():
+                group.transparency   = transparency
+                group.ai_position    = ai_position
+                group.ai_recommendation = ai_rec
+        except Exception as e:
+            import traceback
+            debug_error = traceback.format_exc()
+            self.session.vars['debug_creating_session_error'] = debug_error
+            # re-raise so behavior outside debugging is unchanged
+            raise
 
 
 class Group(BaseGroup):
@@ -843,20 +858,26 @@ class AIRecommendation(Page):
         # the page so it can be checked without server logs / CLI access.
         # Remove this block once the AAAAA investigation is resolved.
         debug_calls = player.session.vars.get('debug_creating_session_calls', [])
+        debug_entry_count = player.session.vars.get('debug_entry_count', 0)
+        debug_last_entry_round = player.session.vars.get('debug_last_entry_round', None)
+        debug_error = player.session.vars.get('debug_creating_session_error', None)
 
         return {
-            'transparency':       transparency,
-            'ai_recommendation':  ai_rec,
-            'round_explanation':  round_explanation,
-            'score_rows':         score_rows,
-            'ai_weights_pa':      AI_WEIGHTS_PA,
-            'is_high':            transparency == 'high',
-            'round_number':       rnd,
-            'ai_position':        group.ai_position,
-            'is_middle':          group.ai_position == 'middle',
-            'pa_initial_choice':  group.pa_initial_choice,
-            'debug_calls':        debug_calls,
-            'debug_build_tag':    DEBUG_BUILD_TAG,
+            'transparency':            transparency,
+            'ai_recommendation':       ai_rec,
+            'round_explanation':       round_explanation,
+            'score_rows':              score_rows,
+            'ai_weights_pa':           AI_WEIGHTS_PA,
+            'is_high':                 transparency == 'high',
+            'round_number':            rnd,
+            'ai_position':             group.ai_position,
+            'is_middle':               group.ai_position == 'middle',
+            'pa_initial_choice':       group.pa_initial_choice,
+            'debug_calls':             debug_calls,
+            'debug_build_tag':         DEBUG_BUILD_TAG,
+            'debug_entry_count':       debug_entry_count,
+            'debug_last_entry_round':  debug_last_entry_round,
+            'debug_error':             debug_error,
         }
 
 
