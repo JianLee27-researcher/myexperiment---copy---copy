@@ -155,6 +155,8 @@
 
   <!-- 🔍 TEMP DEBUG BOX — remove once AAAAA investigation is resolved -->
   <div class="alert alert-warning small mb-4">
+    <strong>BUILD TAG: {{ debug_build_tag }}</strong>
+    (if this text is blank or missing, the new code was NOT deployed)<br><br>
     <strong>DEBUG — creating_session() call history this session:</strong><br>
     {% if debug_calls %}
       {% for c in debug_calls %}

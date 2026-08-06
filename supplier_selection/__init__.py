@@ -75,6 +75,10 @@ DW_MAX = round((DW_PA_MAX + DW_SA_MAX) / 2, 4)
 
 MAX_BONUS_PER_ROUND = 0.20
 
+# 🔍 TEMP DEBUG — bump this string any time you redeploy, to confirm
+# on-screen whether the new code actually went live. Remove when done.
+DEBUG_BUILD_TAG = 'debug-build-03'
+
 
 # ─────────────────────────────────────────────
 # 2. ROUND-SPECIFIC EXPLANATIONS
@@ -852,6 +856,7 @@ class AIRecommendation(Page):
             'is_middle':          group.ai_position == 'middle',
             'pa_initial_choice':  group.pa_initial_choice,
             'debug_calls':        debug_calls,
+            'debug_build_tag':    DEBUG_BUILD_TAG,
         }
 
 
