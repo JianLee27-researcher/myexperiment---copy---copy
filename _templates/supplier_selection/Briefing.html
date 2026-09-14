@@ -15,9 +15,16 @@
       <p>
         Your company is selecting a strategic supplier for a key component.
         You must choose <strong>one supplier</strong> from six candidates (A, B, C, D, E, F).
+        {% if has_ai %}
         The decision involves an <strong>AI recommendation system</strong> followed by a
         two-stage human review: the Purchasing Analyst (PA) evaluates operational criteria,
         and the Sustainability Analyst (SA) makes the final decision on CSR factors.
+        {% else %}
+        The decision is made entirely by your two-person team: the Purchasing Analyst (PA)
+        evaluates operational criteria and proposes a supplier, and the Sustainability
+        Analyst (SA) makes the final decision on CSR factors. No AI system is involved in
+        this session.
+        {% endif %}
       </p>
       <!-- Round repetition rationale — why 5 rounds -->
       <div class="alert alert-light border mt-3 mb-0">
@@ -26,21 +33,20 @@
     </div>
   </div>
 
-  <!-- Score origin note -->
-  <div class="alert alert-light border border-info mb-4">
-    <span class="fw-semibold">📐 About the scores:</span>
-    Supplier scores are normalised between 0 and 1 using a Min-Max method based on
-    raw procurement data. Criteria weights were derived from established procurement
-    literature (Dickson, 1966; Weber et al., 1991). Higher scores are always better.
-  </div>
+  <!-- Score origin note (simplified per pilot feedback) -->
+  <p class="text-muted small mb-4">
+    Higher scores are better for all criteria. Scores are normalised on a 0–1 scale.
+  </p>
 
   <!-- AI Fallibility Notice -->
+  {% if has_ai %}
   <div class="alert alert-light border border-warning mb-4">
     <span class="fw-semibold">📌 Note on the AI system:</span>
     Like all AI systems, this tool may not always produce the optimal outcome.
     Your judgment as a team matters — please evaluate the AI's recommendation
     critically rather than accepting it automatically.
   </div>
+  {% endif %}
 
   <!-- ════════════════════════════════════════
        INFORMATION ASYMMETRY:
@@ -123,12 +129,20 @@
   <div class="card border-primary border-2 mb-4">
     <div class="card-header bg-primary text-white fw-semibold">Your Task — Purchasing Analyst</div>
     <div class="card-body">
+      {% if has_ai %}
       <ol class="mb-0">
         <li>You will first see the <strong>AI system's recommendation</strong> and its reasoning.</li>
         <li>Review the AI's rationale and the supplier purchasing scores.</li>
         <li>Submit your own supplier recommendation.</li>
         <li>Your choice is passed to the Sustainability Analyst for the final decision.</li>
       </ol>
+      {% else %}
+      <ol class="mb-0">
+        <li>Review the supplier purchasing scores above.</li>
+        <li>Submit your own supplier recommendation.</li>
+        <li>Your choice is passed to the Sustainability Analyst for the final decision.</li>
+      </ol>
+      {% endif %}
     </div>
   </div>
 

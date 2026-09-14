@@ -1,7 +1,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # settings.py — Trust in Human-AI Teams (v5)
 #
-# THREE PARAMETERS control the experiment design:
+# FOUR PARAMETERS control the experiment design:
+#
+#   has_ai         : True | False
+#                    True  → AI recommendation system is present (all configs below)
+#                    False → HUMAN CONTROL condition: no AI at all. PA makes a single
+#                            decision directly (no AIRecommendation page), passed to SA.
+#                            transparency / ai_position / accuracy_mode are ignored
+#                            (irrelevant) when has_ai=False.
 #
 #   transparency   : 'high' | 'low'
 #                    High → AI explains reasoning + shows weights + score table
@@ -22,10 +29,34 @@
 # CURRENT PLAN: 2×2 design (transparency × position), accuracy_mode='fixed'
 #   → Use the 4 sessions marked ★ MAIN below
 #
-# ALL 8 COMBINATIONS are defined for flexibility.
+# CONTROL: 'lab_control' / 'online_control' (has_ai=False) — human-only baseline,
+#   structurally comparable to the 'first' AI-position condition (single PA decision).
+#
+# ALL 8 AI COMBINATIONS + 2 CONTROL CONFIGS are defined for flexibility.
 # ─────────────────────────────────────────────────────────────────────────────
 
 SESSION_CONFIGS = [
+
+    # ══════════════════════════════════════════════════════════════
+    # HUMAN CONTROL — no AI at all (baseline)
+    # ══════════════════════════════════════════════════════════════
+
+    dict(
+        name='lab_control',
+        display_name='◻ Control | Lab | No AI',
+        app_sequence=['supplier_selection'],
+        num_demo_participants=2,
+        has_ai=False,
+        sync=True,
+    ),
+    dict(
+        name='online_control',
+        display_name='◻ Control | Online | No AI',
+        app_sequence=['supplier_selection'],
+        num_demo_participants=2,
+        has_ai=False,
+        sync=False,
+    ),
 
     # ══════════════════════════════════════════════════════════════
     # ★ MAIN — Lab, First position, Fixed accuracy (2×2 design)
@@ -36,6 +67,7 @@ SESSION_CONFIGS = [
         display_name='★ Lab | First | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='first',
         accuracy_mode='fixed',
@@ -46,6 +78,7 @@ SESSION_CONFIGS = [
         display_name='★ Lab | First | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='first',
         accuracy_mode='fixed',
@@ -56,6 +89,7 @@ SESSION_CONFIGS = [
         display_name='★ Lab | Middle | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='middle',
         accuracy_mode='fixed',
@@ -66,6 +100,7 @@ SESSION_CONFIGS = [
         display_name='★ Lab | Middle | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='middle',
         accuracy_mode='fixed',
@@ -81,6 +116,7 @@ SESSION_CONFIGS = [
         display_name='Online | First | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='first',
         accuracy_mode='fixed',
@@ -91,6 +127,7 @@ SESSION_CONFIGS = [
         display_name='Online | First | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='first',
         accuracy_mode='fixed',
@@ -101,6 +138,7 @@ SESSION_CONFIGS = [
         display_name='Online | Middle | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='middle',
         accuracy_mode='fixed',
@@ -111,6 +149,7 @@ SESSION_CONFIGS = [
         display_name='Online | Middle | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='middle',
         accuracy_mode='fixed',
@@ -126,6 +165,7 @@ SESSION_CONFIGS = [
         display_name='Lab | First | High Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='first',
         accuracy_mode='manipulation',
@@ -136,6 +176,7 @@ SESSION_CONFIGS = [
         display_name='Lab | First | Low Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='first',
         accuracy_mode='manipulation',
@@ -146,6 +187,7 @@ SESSION_CONFIGS = [
         display_name='Lab | Middle | High Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='high',
         ai_position='middle',
         accuracy_mode='manipulation',
@@ -156,6 +198,7 @@ SESSION_CONFIGS = [
         display_name='Lab | Middle | Low Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
+        has_ai=True,
         transparency='low',
         ai_position='middle',
         accuracy_mode='manipulation',
@@ -165,7 +208,7 @@ SESSION_CONFIGS = [
 
 SESSION_CONFIG_DEFAULTS = dict(
     real_world_currency_per_point=1.00,
-    participation_fee=8.00,   # € fixed participation fee
+    participation_fee=10.00,   # € fixed participation fee (+ up to €5 performance bonus = €10-15 total, per consent form)
 )
 
 LANGUAGE_CODE = 'en'

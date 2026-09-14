@@ -17,11 +17,15 @@
 
   <!-- Condition -->
   <div class="alert alert-light border mb-4">
+    {% if has_ai %}
     <strong>Your condition:</strong> AI Transparency —
     {% if transparency == 'high' %}
       <span class="badge bg-primary">High (Glass Box)</span>
     {% else %}
       <span class="badge bg-secondary">Low (Black Box)</span>
+    {% endif %}
+    {% else %}
+    <strong>Your condition:</strong> <span class="badge bg-dark">Human Team — No AI (Control)</span>
     {% endif %}
   </div>
 
@@ -153,24 +157,55 @@
   <div class="card border-warning border-2 mb-4">
     <div class="card-header fw-semibold bg-warning text-dark">Study Debrief</div>
     <div class="card-body p-4">
+      {% if has_ai %}
       <p>
         This study examined how <strong>AI transparency</strong> affects trust and
         decision-making in two-person procurement teams. Participants were randomly assigned
         to either a <em>high-transparency</em> (Glass Box) or <em>low-transparency</em>
-        (Black Box) AI condition.
+        (Black Box) AI condition, or to a human-only control condition without AI.
       </p>
       <p>
         The AI recommendation system was a controlled simulation (Wizard of Oz design).
-        In most sessions, the AI correctly identified the optimal supplier based on
-        weighted scoring criteria. In some sessions, the AI's recommendation was
-        intentionally imperfect to reflect the realistic limitations of AI systems.
+        Across the study as a whole, the AI is correct about 70% of the time on average.
+        {{ debrief_accuracy_text }}
       </p>
-      <p class="mb-0">
+      <p>
         Your data will be analysed in aggregate to understand how transparency shapes
         <strong>trust calibration</strong> and <strong>team decision alignment</strong>
-        in human-AI collaboration.
+        in human-AI collaboration, compared against teams who made decisions without AI.
+      </p>
+      {% else %}
+      <p>
+        This study examined how <strong>AI transparency</strong> affects trust and
+        decision-making in two-person procurement teams. Some participants were randomly
+        assigned to work with an AI recommendation system (in either a high- or
+        low-transparency version); <strong>your team was assigned to the control
+        condition</strong>, making decisions without any AI involvement.
+      </p>
+      <p>
+        Your team's data serves as an important baseline: it lets us see how procurement
+        teams make decisions and calibrate trust in <strong>each other</strong> when no AI
+        system is involved at all, so that we can meaningfully interpret what changes (if
+        anything) when an AI recommendation system is introduced in other sessions.
+      </p>
+      {% endif %}
+      <p>
+        Please note that your individual choices are <strong>not</strong> being evaluated
+        as a measure of skill or competence — there is no "pass" or "fail" here. We are
+        only interested in patterns across many participants, not in judging any one
+        person's decisions.
+      </p>
+      <p class="mb-0">
+        If, now that you know more about the study, you would prefer that your data not
+        be used, you may request withdrawal at any time within 3 months of today by
+        contacting <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>. This will
+        not affect your payment for today's session.
       </p>
     </div>
+  </div>
+
+  <div class="alert alert-light border text-center small">
+    Questions about this study? Contact <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>.
   </div>
 
   <div class="text-center text-muted mb-5">

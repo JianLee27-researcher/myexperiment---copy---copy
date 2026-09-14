@@ -15,6 +15,7 @@
   </div>
 
   <!-- ── Section 1: Reliability (McKnight — 7pt, no N/A) ──── -->
+  {% if has_ai %}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-bold bg-dark text-white">
       Section 1: Reliability
@@ -54,6 +55,7 @@
       {% formfield player.trust_helpfulness_4 %}
     </div>
   </div>
+  {% endif %}
 
   <!-- ── Section 4: Team Trust (exploratory — 7pt + N/A) ──── -->
   <div class="card border-0 shadow-sm mb-4">
@@ -100,6 +102,7 @@
     SA-specific note: SA did not see AI directly — the N/A option is especially
     relevant here. The survey_intro already acknowledges this at page level.
   -->
+  {% if has_ai %}
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-bold bg-primary text-white">
       Section 6: AI Transparency
@@ -129,6 +132,7 @@
       {% formfield player.mc_transparency_2 %}
     </div>
   </div>
+  {% endif %}
 
   <div class="text-end mt-2 mb-5">
     {{ next_button }}

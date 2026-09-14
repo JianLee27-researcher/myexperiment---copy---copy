@@ -73,7 +73,7 @@ DW_SA_MAX = round(
 
 DW_MAX = round((DW_PA_MAX + DW_SA_MAX) / 2, 4)
 
-MAX_BONUS_PER_ROUND = 0.20
+MAX_BONUS_PER_ROUND = 1.00  # 5 rounds x 1.00 = max €5 bonus, on top of €10 fixed fee (total ceiling €15)
 
 
 # ─────────────────────────────────────────────
@@ -297,6 +297,39 @@ def build_feedback_text(
     return f"{pa_text}\n\n{sa_text}"
 
 
+def build_feedback_text_control(
+    sa_choice: str,
+    transparency: str,
+    dw_pa: float, dom_pa: str,
+    dw_sa: float, dom_sa: str,
+) -> str:
+    """
+    HUMAN CONTROL condition feedback — reports the team's own performance
+    gap against the optimal supplier, with no reference to an AI at all
+    (there is none in this condition).
+    """
+    if transparency == 'high':
+        pa_block = (
+            f"[Purchasing Criteria]\nYour team selected Supplier {sa_choice}.\n"
+            f"Δw (PA) = {dw_pa:.3f}  |  dominant gap: {dom_pa or '—'}"
+        )
+        sa_block = (
+            f"[CSR Criteria]\n"
+            f"Δw (SA) = {dw_sa:.3f}  |  dominant gap: {dom_sa or '—'}"
+        )
+        return "\n\n".join([pa_block, sa_block])
+
+    if dw_pa == 0 and dw_sa == 0:
+        return (
+            "Your team's choice matched the optimal supplier on both "
+            "purchasing and CSR criteria this round."
+        )
+    return (
+        "Your team's choice diverged from the optimal supplier on one or "
+        "more criteria this round."
+    )
+
+
 # ─────────────────────────────────────────────
 # 5. OTREE CLASSES
 # ─────────────────────────────────────────────
@@ -337,6 +370,16 @@ class Subsession(BaseSubsession):
 # which is exactly why the earlier raise-RuntimeError test never fired.
 # Fix: define it at module level, taking `subsession` as the first argument.
 def creating_session(subsession):
+    has_ai = subsession.session.config.get('has_ai', True)
+
+    if not has_ai:
+        # HUMAN CONTROL condition: no AI recommendation is drawn or shown at all.
+        # group.transparency / ai_position / ai_recommendation stay at their
+        # model defaults (empty / 'first' placeholder — unused by any page
+        # when has_ai=False, since AIRecommendation/PAInitialDecision are
+        # both hidden in this condition).
+        return
+
     transparency  = subsession.session.config.get('transparency',  'high')
     ai_position   = subsession.session.config.get('ai_position',   'first')
     accuracy_mode = subsession.session.config.get('accuracy_mode', 'fixed')
@@ -361,7 +404,11 @@ class Group(BaseGroup):
     transparency      = models.StringField(initial='')
     ai_position       = models.StringField(initial='first')
     ai_recommendation = models.StringField(initial='')
-    pa_initial_choice = models.StringField(initial='')
+    pa_initial_choice = models.StringField(
+        choices=SUPPLIERS,
+        initial='',
+        label="Based solely on your own judgment, which supplier would you initially recommend?",
+    )
 
     pa_choice = models.StringField(
         choices=SUPPLIERS,
@@ -401,13 +448,21 @@ class Group(BaseGroup):
         # 🛡️ 안전장치: group.transparency가 비어있으면 session config에서 가져옴
         transparency_val = self.transparency or self.session.config.get('transparency', 'low')
 
-        self.ai_feedback_text = build_feedback_text(
-            ai_recommendation=self.ai_recommendation,
-            sa_choice=team_choice,
-            transparency=transparency_val,
-            dw_pa=dw_pa, dom_pa=dom_pa,
-            dw_sa=dw_sa, dom_sa=dom_sa,
-        )
+        if self.session.config.get('has_ai', True):
+            self.ai_feedback_text = build_feedback_text(
+                ai_recommendation=self.ai_recommendation,
+                sa_choice=team_choice,
+                transparency=transparency_val,
+                dw_pa=dw_pa, dom_pa=dom_pa,
+                dw_sa=dw_sa, dom_sa=dom_sa,
+            )
+        else:
+            self.ai_feedback_text = build_feedback_text_control(
+                sa_choice=team_choice,
+                transparency=transparency_val,
+                dw_pa=dw_pa, dom_pa=dom_pa,
+                dw_sa=dw_sa, dom_sa=dom_sa,
+            )
 
 
 class Player(BasePlayer):
@@ -423,26 +478,48 @@ class Player(BasePlayer):
         widget=widgets.CheckboxInput,
     )
 
+    # Separate, independent consent item (official consent form Section 5/6):
+    # future reuse of anonymised data is NOT a condition of participation —
+    # participants must explicitly choose one option, with no pre-selected default.
+    consent_future_reuse = models.BooleanField(
+        choices=[
+            [True, (
+                "I agree that my anonymised data may be reused in subsequent "
+                "studies within the same research program. / "
+                "J'accepte que mes données anonymisées soient réutilisées dans "
+                "le cadre d'études ultérieures relevant du même programme de recherche."
+            )],
+            [False, (
+                "I do not agree that my anonymised data may be reused beyond "
+                "this project. / "
+                "Je n'accepte pas que mes données anonymisées soient réutilisées "
+                "au-delà du présent projet."
+            )],
+        ],
+        widget=widgets.RadioSelect,
+        label="",
+    )
+
     baseline_ai_trust_1 = models.IntegerField(
         label="In general, I trust AI-based recommendation systems to provide accurate information.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     baseline_ai_trust_2 = models.IntegerField(
         label="I believe AI systems can make reliable decisions in business contexts.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     baseline_ai_trust_3 = models.IntegerField(
         label="I am comfortable relying on AI tools when making important decisions.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
 
     baseline_domain_procurement = models.IntegerField(
         label="How familiar are you with B2B procurement processes?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     baseline_domain_esg = models.IntegerField(
         label="How familiar are you with ESG/CSR criteria in supplier evaluation?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
 
     baseline_ai_frequency = models.IntegerField(
         label="How often do you use AI tools in your work or studies?",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     baseline_ai_decision = models.StringField(
         label="Have you previously used AI for decision-making support?",
         choices=[['yes', 'Yes'], ['no', 'No']],
@@ -450,66 +527,66 @@ class Player(BasePlayer):
 
     trust_reliability_1 = models.IntegerField(
         label="The AI system is a very reliable source of recommendations.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_reliability_2 = models.IntegerField(
         label="The AI system does not fail me.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_reliability_3 = models.IntegerField(
         label="The AI system is extremely dependable.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_reliability_4 = models.IntegerField(
         label="The AI system does not malfunction for me.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
 
     trust_functionality_1 = models.IntegerField(
         label="The AI system has the functionality I need.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_functionality_2 = models.IntegerField(
         label="The AI system has the features required for this task.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_functionality_3 = models.IntegerField(
         label="The AI system has the ability to do what I want it to do.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
 
     trust_helpfulness_1 = models.IntegerField(
         label="The AI system supplies the help I need through its recommendations.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_helpfulness_2 = models.IntegerField(
         label="The AI system provides competent guidance through its recommendations.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_helpfulness_3 = models.IntegerField(
         label="The AI system provides whatever help I need.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
     trust_helpfulness_4 = models.IntegerField(
         label="The AI system provides very sensible and effective advice.",
-        choices=list(range(1, 8)), widget=widgets.RadioSelectHorizontal)
+        choices=list(range(1, 8)), widget=widgets.RadioSelect)
 
     trust_team_1 = models.IntegerField(
         label="Overall, I trust this team.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
     trust_team_2 = models.IntegerField(
         label="I am satisfied with the team decision-making process involving the AI.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
 
     trust_interpersonal_1 = models.IntegerField(
         label="My human team member is very capable of performing their job.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
     trust_interpersonal_2 = models.IntegerField(
         label="I trust my team partner's judgment in this task.",
         choices=[0, 1, 2, 3, 4, 5, 6, 7],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
 
     mc_transparency_1 = models.IntegerField(
         label="The AI system provided a clear explanation of how it reached its recommendation.",
         choices=[0, 1, 2, 3, 4, 5],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
     mc_transparency_2 = models.IntegerField(
         label="I could understand the criteria and weights used by the AI.",
         choices=[0, 1, 2, 3, 4, 5],
-        widget=widgets.RadioSelectHorizontal)
+        widget=widgets.RadioSelect)
 
     comprehension_q1 = models.StringField(
         label="In this task, who makes the final supplier selection?",
@@ -576,7 +653,7 @@ class Consent(Page):
     def is_displayed(player): return is_round_1(player)
 
     form_model  = 'player'
-    form_fields = ['consent_given']
+    form_fields = ['consent_given', 'consent_future_reuse']
 
     @staticmethod
     def error_message(player, values):
@@ -585,6 +662,9 @@ class Consent(Page):
                 'You must agree to the consent form to participate. / '
                 'Vous devez accepter le formulaire de consentement pour participer.'
             )
+        # Note: consent_future_reuse is a separate, independent choice —
+        # both True and False are valid answers; only a missing answer is an error,
+        # which oTree already enforces automatically for a required field with no default.
 
 
 class BaselineTrust(Page):
@@ -683,6 +763,7 @@ class Briefing(Page):
 
         return {
             'is_pa':                 is_pa(player),
+            'has_ai':                has_ai(player),
             'pa_rows':               pa_rows,
             'sa_rows':               sa_rows,
             'ai_weights_pa':         AI_WEIGHTS_PA,
@@ -732,6 +813,9 @@ def is_position_middle(player):
 def is_position_first(player):
     return player.session.config.get('ai_position', 'first') == 'first'
 
+def has_ai(player):
+    return player.session.config.get('has_ai', True)
+
 
 class BriefingWaitPage(WaitPage):
     @staticmethod
@@ -754,7 +838,7 @@ class RoundIntroWaitPage(WaitPage):
 class PAInitialDecision(Page):
     @staticmethod
     def is_displayed(player):
-        return is_pa(player) and is_position_middle(player)
+        return has_ai(player) and is_pa(player) and is_position_middle(player)
 
     form_model  = 'group'
     form_fields = ['pa_initial_choice']
@@ -782,7 +866,7 @@ class PAInitialDecision(Page):
 class SAWaitForPAInitial(WaitPage):
     @staticmethod
     def is_displayed(player):
-        return is_sa(player) and is_sync(player) and is_position_middle(player)
+        return has_ai(player) and is_sa(player) and is_sync(player) and is_position_middle(player)
     title_text = "Waiting for the Purchasing Analyst…"
     body_text  = "Your partner is making their initial supplier assessment. Please wait."
 
@@ -792,7 +876,7 @@ class SAWaitForPA(WaitPage):
     def is_displayed(player):
         return is_sa(player) and is_sync(player)
     title_text = "Waiting for the Purchasing Analyst…"
-    body_text  = "Your partner is reviewing the AI recommendation. Please wait."
+    body_text  = "Your partner is reviewing the information and making a decision. Please wait."
 
 
 class PAWaitForSA(WaitPage):
@@ -805,7 +889,7 @@ class PAWaitForSA(WaitPage):
 
 class AIRecommendation(Page):
     @staticmethod
-    def is_displayed(player): return is_pa(player)
+    def is_displayed(player): return has_ai(player) and is_pa(player)
 
     form_model  = 'group'
     form_fields = ['pa_choice']
@@ -846,6 +930,41 @@ class AIRecommendation(Page):
             'ai_position':             group.ai_position,
             'is_middle':               group.ai_position == 'middle',
             'pa_initial_choice':       group.pa_initial_choice,
+        }
+
+
+class PADecisionControl(Page):
+    """
+    HUMAN CONTROL condition (has_ai=False): PA makes a single supplier
+    decision directly from the purchasing data, with no AI recommendation
+    shown at all. Structurally parallel to the 'first' AI-position condition
+    with the AI step removed — same single pa_choice submission point, same
+    downstream fields (pa_choice) so SADecision / RoundFeedback / Results
+    work unchanged regardless of has_ai.
+    """
+    @staticmethod
+    def is_displayed(player): return (not has_ai(player)) and is_pa(player)
+
+    form_model  = 'group'
+    form_fields = ['pa_choice']
+
+    @staticmethod
+    def vars_for_template(player):
+        score_rows = []
+        for sup in SUPPLIERS:
+            pa_sc = SUPPLIER_DATA[sup]['pa']
+            pa_total = sum(pa_sc[c] * AI_WEIGHTS_PA[c] for c in AI_WEIGHTS_PA)
+            score_rows.append({
+                'supplier':   sup,
+                'cost':       pa_sc['cost'],
+                'delivery':   pa_sc['delivery'],
+                'innovation': pa_sc['innovation'],
+                'pa_total':   round(pa_total, 3),
+            })
+        return {
+            'score_rows':    score_rows,
+            'ai_weights_pa': AI_WEIGHTS_PA,
+            'round_number':  player.round_number,
         }
 
 
@@ -894,16 +1013,23 @@ class SADecision(Page):
         pa = group.pa_choice
         sa = group.sa_choice
 
-        group.congruence_ai_pa = 'agree' if ai == pa else 'disagree'
-        group.congruence_ai_sa = 'agree' if ai == sa else 'disagree'
         group.congruence_pa_sa = 'agree' if pa == sa else 'disagree'
 
-        if ai == pa == sa:
-            group.congruence_all = 'full'
-        elif ai == sa or ai == pa or pa == sa:
-            group.congruence_all = 'partial'
+        if has_ai(player):
+            group.congruence_ai_pa = 'agree' if ai == pa else 'disagree'
+            group.congruence_ai_sa = 'agree' if ai == sa else 'disagree'
+            if ai == pa == sa:
+                group.congruence_all = 'full'
+            elif ai == sa or ai == pa or pa == sa:
+                group.congruence_all = 'partial'
+            else:
+                group.congruence_all = 'none'
         else:
-            group.congruence_all = 'none'
+            # HUMAN CONTROL: no AI vertex exists, so AI-congruence fields are
+            # not applicable — left blank rather than misleadingly 'disagree'.
+            group.congruence_ai_pa = ''
+            group.congruence_ai_sa = ''
+            group.congruence_all  = group.congruence_pa_sa
 
 
 class RoundFeedback(Page):
@@ -917,6 +1043,7 @@ class RoundFeedback(Page):
         return {
             'round_number':      player.round_number,
             'next_round_number': player.round_number + 1,
+            'has_ai':            has_ai(player),
             'ai_recommendation': group.ai_recommendation,
             'pa_choice':         group.pa_choice,
             'sa_choice':         group.sa_choice,
@@ -943,20 +1070,35 @@ class TrustSurvey(Page):
     def is_displayed(player): return is_last_round(player)
 
     form_model  = 'player'
-    form_fields = [
-        'trust_reliability_1', 'trust_reliability_2',
-        'trust_reliability_3', 'trust_reliability_4',
-        'trust_functionality_1', 'trust_functionality_2', 'trust_functionality_3',
-        'trust_helpfulness_1',  'trust_helpfulness_2',
-        'trust_helpfulness_3',  'trust_helpfulness_4',
-        'trust_team_1', 'trust_team_2',
-        'trust_interpersonal_1', 'trust_interpersonal_2',
-        'mc_transparency_1', 'mc_transparency_2',
-    ]
+
+    @staticmethod
+    def get_form_fields(player):
+        # AI-directed trust items (reliability/functionality/helpfulness/
+        # transparency) only make sense when an AI was actually present.
+        # The human-control condition keeps only the team/interpersonal
+        # trust items, which apply regardless of has_ai.
+        team_fields = [
+            'trust_team_1', 'trust_team_2',
+            'trust_interpersonal_1', 'trust_interpersonal_2',
+        ]
+        if has_ai(player):
+            return [
+                'trust_reliability_1', 'trust_reliability_2',
+                'trust_reliability_3', 'trust_reliability_4',
+                'trust_functionality_1', 'trust_functionality_2', 'trust_functionality_3',
+                'trust_helpfulness_1',  'trust_helpfulness_2',
+                'trust_helpfulness_3',  'trust_helpfulness_4',
+            ] + team_fields + ['mc_transparency_1', 'mc_transparency_2']
+        return team_fields
 
     @staticmethod
     def vars_for_template(player):
-        if is_sa(player):
+        if not has_ai(player):
+            survey_intro = (
+                "Please answer the following questions based on your experience "
+                "working with your partner during the five rounds."
+            )
+        elif is_sa(player):
             survey_intro = (
                 "As the Sustainability Analyst, you did not interact with the AI system directly. "
                 "Please answer the following questions based on your impression of how AI "
@@ -975,6 +1117,7 @@ class TrustSurvey(Page):
             'scale_5_na':    [0] + list(range(1, 6)),
             'survey_intro':  survey_intro,
             'is_sa':         is_sa(player),
+            'has_ai':        has_ai(player),
             'scale_note': (
                 "Note: some questions may appear similar. Each item measures "
                 "a distinct aspect of trust. Please respond to each one separately."
@@ -1010,6 +1153,30 @@ class Results(Page):
         # 🛡️ 안전장치: group.transparency가 비어있으면 session.config에서 가져옴
         transparency_val = player.group.transparency or player.session.config.get('transparency', 'low')
 
+        # Debrief text branches by the accuracy_mode actually experienced by
+        # this participant's session, so the debrief accurately reflects
+        # what they went through rather than a one-size-fits-all statement.
+        # For the human control condition (has_ai=False), no AI accuracy
+        # mechanism applies at all, so this text is left blank and the
+        # template shows a control-specific debrief paragraph instead.
+        if not has_ai(player):
+            debrief_accuracy_text = ''
+        else:
+            accuracy_mode_val = player.session.config.get('accuracy_mode', 'fixed')
+            if accuracy_mode_val == 'manipulation':
+                debrief_accuracy_text = (
+                    "In your session specifically, the AI's accuracy was set once at "
+                    "the very start and held constant for all 5 rounds — so you "
+                    "experienced either a consistently accurate AI, or a consistently "
+                    "inaccurate one, for your entire session."
+                )
+            else:
+                debrief_accuracy_text = (
+                    "In your session specifically, the AI's accuracy was re-drawn "
+                    "independently each round (correct about 70% of the time on "
+                    "average) — so its reliability could vary from round to round."
+                )
+
         round_summary = []
         for p in all_rounds:
             g = p.group
@@ -1036,6 +1203,9 @@ class Results(Page):
             'cumulative_dw_pa':  cumulative_dw_pa,
             'cumulative_dw_sa':  cumulative_dw_sa,
             'round_summary':     round_summary,
+            'has_ai':            has_ai(player),
+            'debrief_accuracy_text': debrief_accuracy_text,
+            'contact_email':     'jian.lee03@kedgebs.com',
         }
 
 # ─────────────────────────────────────────────
@@ -1051,10 +1221,11 @@ page_sequence = [
     BriefingWaitPage,       # sync=True + Round 1 only
     RoundIntro,             # Rounds 2-5, shows previous round summary
     RoundIntroWaitPage,     # sync=True + Rounds 2-5 only
-    PAInitialDecision,      # PA only + ai_position='middle' only
-    SAWaitForPAInitial,     # SA only + sync=True + ai_position='middle' only
-    AIRecommendation,       # PA only (sees AI + submits final choice)
-    SAWaitForPA,            # SA only + sync=True (waits after PA submits)
+    PAInitialDecision,      # PA only + has_ai=True + ai_position='middle' only
+    SAWaitForPAInitial,     # SA only + sync=True + has_ai=True + ai_position='middle' only
+    AIRecommendation,       # PA only + has_ai=True (sees AI + submits final choice)
+    PADecisionControl,      # PA only + has_ai=False (no AI shown, single decision)
+    SAWaitForPA,            # SA only + sync=True (waits after PA submits, either path)
     SADecision,             # SA only
     PAWaitForSA,            # PA only + sync=True only
     RoundFeedback,          # Rounds 1-4 only

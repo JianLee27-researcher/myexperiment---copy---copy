@@ -14,13 +14,16 @@
       <table class="table table-bordered mb-0 text-center">
         <thead class="table-light">
           <tr>
+            {% if has_ai %}
             <th>AI Recommendation</th>
+            {% endif %}
             <th>PA Choice</th>
             <th>Team Decision (SA)</th>
           </tr>
         </thead>
         <tbody>
           <tr>
+            {% if has_ai %}
             <td>
               <span class="badge bg-dark fs-6">{{ ai_recommendation }}</span>
             </td>
@@ -39,6 +42,21 @@
                 <br><small class="text-warning">≠ Diverged from AI</small>
               {% endif %}
             </td>
+            {% else %}
+            <td>
+              <span class="badge bg-primary fs-6">{{ pa_choice }}</span>
+            </td>
+            <td>
+              <span class="badge {% if sa_choice == pa_choice %}bg-success{% else %}bg-warning text-dark{% endif %} fs-6">
+                {{ sa_choice }}
+              </span>
+              {% if sa_choice == pa_choice %}
+                <br><small class="text-success">✓ Agreed with PA</small>
+              {% else %}
+                <br><small class="text-warning">≠ Revised PA's choice</small>
+              {% endif %}
+            </td>
+            {% endif %}
           </tr>
         </tbody>
       </table>
@@ -113,10 +131,10 @@
     </div>
   </div>
 
-  <!-- ── AI Feedback Text ──────────────────────────── -->
+  <!-- ── Feedback Text ─────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold" style="background:#1a1a2e; color:#fff;">
-      🤖 AI System Feedback
+      {% if has_ai %}🤖 AI System Feedback{% else %}📊 Team Performance Feedback{% endif %}
     </div>
     <div class="card-body p-4">
       {% if is_high %}
