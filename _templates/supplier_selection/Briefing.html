@@ -13,17 +13,28 @@
     <div class="card-header bg-dark text-white fw-semibold">Scenario</div>
     <div class="card-body p-4">
       <p>
-        Your company is selecting a strategic supplier for a key component.
-        You must choose <strong>one supplier</strong> from six candidates (A, B, C, D, E, F).
+        <strong>{{ company_name }}</strong>, a global energy company expanding its solar
+        power business, has received proposals from six candidate solar panel suppliers
+        (A, B, C, D, E, F) and must select one to move forward with.
         {% if has_ai %}
-        The decision involves an <strong>AI recommendation system</strong> followed by a
-        two-stage human review: the Purchasing Analyst (PA) evaluates operational criteria,
-        and the Sustainability Analyst (SA) makes the final decision on CSR factors.
+          {% if is_principal_augmented %}
+          Here is how the decision unfolds: <strong>first</strong>, the Sustainability
+          Analyst (SA) reviews the AI system's recommendation together with the CSR
+          criteria, and submits a recommendation. <strong>Next</strong>, the Purchasing
+          Analyst (PA) reviews the SA's recommendation together with the purchasing
+          criteria — with no AI shown at this step — and makes the team's final decision.
+          {% else %}
+          Here is how the decision unfolds: <strong>first</strong>, the Sustainability
+          Analyst (SA) reviews the CSR criteria and submits a recommendation, with no AI
+          shown at this step. <strong>Next</strong>, the Purchasing Analyst (PA) reviews
+          the SA's recommendation, the purchasing criteria, and the AI system's
+          recommendation, and makes the team's final decision.
+          {% endif %}
         {% else %}
-        The decision is made entirely by your two-person team: the Purchasing Analyst (PA)
-        evaluates operational criteria and proposes a supplier, and the Sustainability
-        Analyst (SA) makes the final decision on CSR factors. No AI system is involved in
-        this session.
+        Here is how the decision unfolds, with no AI involved: <strong>first</strong>, the
+        Sustainability Analyst (SA) reviews the CSR criteria and submits a recommendation.
+        <strong>Then</strong>, the Purchasing Analyst (PA) reviews the SA's recommendation
+        together with the purchasing criteria, and makes the team's final decision.
         {% endif %}
       </p>
       <!-- Round repetition rationale — why 5 rounds -->
@@ -129,20 +140,12 @@
   <div class="card border-primary border-2 mb-4">
     <div class="card-header bg-primary text-white fw-semibold">Your Task — Purchasing Analyst</div>
     <div class="card-body">
-      {% if has_ai %}
       <ol class="mb-0">
-        <li>You will first see the <strong>AI system's recommendation</strong> and its reasoning.</li>
-        <li>Review the AI's rationale and the supplier purchasing scores.</li>
-        <li>Submit your own supplier recommendation.</li>
-        <li>Your choice is passed to the Sustainability Analyst for the final decision.</li>
+        <li>You decide <strong>second</strong>, after your partner (Sustainability Analyst).</li>
+        <li>You will see your partner's recommendation{% if has_ai and is_agent_augmented %},
+            the AI system's recommendation,{% endif %} and the purchasing criteria.</li>
+        <li>Submit the <strong>team's final decision</strong>.</li>
       </ol>
-      {% else %}
-      <ol class="mb-0">
-        <li>Review the supplier purchasing scores above.</li>
-        <li>Submit your own supplier recommendation.</li>
-        <li>Your choice is passed to the Sustainability Analyst for the final decision.</li>
-      </ol>
-      {% endif %}
     </div>
   </div>
 
@@ -223,9 +226,11 @@
     <div class="card-header bg-success text-white fw-semibold">Your Task — Sustainability Analyst</div>
     <div class="card-body">
       <ol class="mb-0">
-        <li>You will see the <strong>Purchasing Analyst's supplier choice</strong>.</li>
-        <li>Evaluate it against the CSR scores above.</li>
-        <li>Make the <strong>final team decision</strong> by selecting a supplier.</li>
+        <li>You decide <strong>first</strong>{% if has_ai and is_principal_augmented %}, after
+            reviewing the AI system's recommendation{% endif %}.</li>
+        <li>Evaluate the suppliers against the CSR scores above.</li>
+        <li>Submit your recommendation to the <strong>Purchasing Analyst</strong>, who will
+            make the team's final decision.</li>
       </ol>
     </div>
   </div>

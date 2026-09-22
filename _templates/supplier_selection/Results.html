@@ -62,7 +62,7 @@
     </div>
   </div>
 
-  <!-- Cumulative Δw -->
+  <!-- Cumulative Δw — exact figures revealed here for the first time -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-header fw-semibold bg-dark text-white">
       Cumulative Performance Gap (Δw across 5 rounds)
@@ -71,7 +71,7 @@
       <div class="row text-center g-3">
         <div class="col-md-6">
           <div class="border rounded p-3">
-            <div class="text-muted small mb-1">Total Purchasing Gap (PA)</div>
+            <div class="text-muted small mb-1">Total Purchasing Gap</div>
             <div class="fs-2 fw-bold
               {% if cumulative_dw_pa == 0 %}text-success
               {% elif cumulative_dw_pa < 0.5 %}text-warning
@@ -82,7 +82,7 @@
         </div>
         <div class="col-md-6">
           <div class="border rounded p-3">
-            <div class="text-muted small mb-1">Total CSR Gap (SA)</div>
+            <div class="text-muted small mb-1">Total CSR Gap</div>
             <div class="fs-2 fw-bold
               {% if cumulative_dw_sa == 0 %}text-success
               {% elif cumulative_dw_sa < 0.5 %}text-warning
@@ -93,7 +93,7 @@
         </div>
       </div>
       <p class="text-muted small mt-3 mb-0">
-        Δw = 0 means the team's choice matched the optimal recommendation every round.
+        Δw = 0 means the team's final choice matched the optimal supplier every round.
         Higher values indicate greater cumulative deviation.
       </p>
     </div>
@@ -108,11 +108,9 @@
           <thead class="table-dark">
             <tr>
               <th>Round</th>
-              <th>PA Choice</th>
-              <th>Team Decision</th>
+              <th>SA Recommendation</th>
+              <th>Team's Final Decision (PA)</th>
               <th>Optimal?</th>
-              <th>Δw (PA)</th>
-              <th>Δw (SA)</th>
               <th>Congruence</th>
             </tr>
           </thead>
@@ -121,11 +119,11 @@
             <tr {% if r.optimal %}class="table-success"{% endif %}>
               <td class="fw-semibold">{{ r.round }}</td>
               <td>
-                <span class="badge bg-primary">{{ r.pa_choice }}</span>
+                <span class="badge bg-success">{{ r.sa_choice }}</span>
               </td>
               <td>
                 <span class="badge {% if r.optimal %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                  {{ r.sa_choice }}
+                  {{ r.pa_choice }}
                 </span>
               </td>
               <td>
@@ -135,8 +133,6 @@
                   <span class="text-muted">—</span>
                 {% endif %}
               </td>
-              <td>{{ r.dw_pa }}</td>
-              <td>{{ r.dw_sa }}</td>
               <td>
                 <span class="badge
                   {% if r.congruence == 'full' %}bg-success
@@ -159,27 +155,32 @@
     <div class="card-body p-4">
       {% if has_ai %}
       <p>
-        This study examined how <strong>AI transparency</strong> affects trust and
-        decision-making in two-person procurement teams. Participants were randomly assigned
-        to either a <em>high-transparency</em> (Glass Box) or <em>low-transparency</em>
-        (Black Box) AI condition, or to a human-only control condition without AI.
+        This study examined how <strong>AI transparency</strong> and <strong>which team
+        role is AI-assisted</strong> affect trust and decision-making in two-person
+        procurement teams. Participants were randomly assigned to either a
+        <em>high-transparency</em> (Glass Box) or <em>low-transparency</em> (Black Box)
+        AI condition, or to a human-only control condition without AI.
       </p>
       <p>
         The AI recommendation system was a controlled simulation (Wizard of Oz design).
         Across the study as a whole, the AI is correct about 70% of the time on average.
         {{ debrief_accuracy_text }}
       </p>
+      {% if debrief_blinding_text %}
+      <p>{{ debrief_blinding_text }}</p>
+      {% endif %}
       <p>
-        Your data will be analysed in aggregate to understand how transparency shapes
-        <strong>trust calibration</strong> and <strong>team decision alignment</strong>
-        in human-AI collaboration, compared against teams who made decisions without AI.
+        Your data will be analysed in aggregate to understand how transparency and the
+        allocation of AI assistance shape <strong>trust calibration</strong> and
+        <strong>team decision alignment</strong> in human-AI collaboration, compared
+        against teams who made decisions without AI.
       </p>
       {% else %}
       <p>
-        This study examined how <strong>AI transparency</strong> affects trust and
-        decision-making in two-person procurement teams. Some participants were randomly
-        assigned to work with an AI recommendation system (in either a high- or
-        low-transparency version); <strong>your team was assigned to the control
+        This study examined how <strong>AI transparency</strong> and <strong>which team
+        role is AI-assisted</strong> affect trust and decision-making in two-person
+        procurement teams. Some participants were randomly assigned to work with an AI
+        recommendation system; <strong>your team was assigned to the control
         condition</strong>, making decisions without any AI involvement.
       </p>
       <p>

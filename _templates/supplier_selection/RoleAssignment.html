@@ -16,15 +16,18 @@
       <hr>
       <h5 class="fw-semibold mb-2">Your Responsibilities</h5>
       <ul class="mb-3">
-        <li>Review the <strong>AI system's supplier recommendation</strong></li>
+        <li>Review your <strong>partner's (Sustainability Analyst's) recommendation</strong></li>
+        {% if has_ai and was_augmented %}
+        <li>Review the <strong>AI system's recommendation</strong></li>
+        {% endif %}
         <li>Evaluate suppliers on <strong>purchasing criteria</strong>:
             cost efficiency, delivery reliability, and innovation capability</li>
-        <li>Submit your recommendation to your partner (Sustainability Analyst)</li>
+        <li>Make the <strong>team's final decision</strong> on which supplier to select</li>
       </ul>
-      <h5 class="fw-semibold mb-2">Your Evaluation Criteria &amp; AI Weights</h5>
+      <h5 class="fw-semibold mb-2">Your Evaluation Criteria{% if has_ai and was_augmented %} &amp; AI Weights{% endif %}</h5>
       <table class="table table-sm table-bordered text-center">
         <thead class="table-light">
-          <tr><th>Criterion</th><th>AI Weight</th></tr>
+          <tr><th>Criterion</th><th>{% if has_ai and was_augmented %}AI {% endif %}Weight</th></tr>
         </thead>
         <tbody>
           <tr><td>Cost Efficiency</td><td>30%</td></tr>
@@ -33,8 +36,10 @@
         </tbody>
       </table>
       <div class="alert alert-info mb-0">
-        <strong>Note:</strong> You will <em>first</em> see the AI's recommendation before
-        making your own choice. Your recommendation is then passed to the Sustainability Analyst.
+        <strong>Note:</strong> You decide <em>second</em>, after your partner. You will see
+        your partner's recommendation{% if has_ai and was_augmented %} and the AI
+        system's recommendation{% endif %} before making your choice. Your decision is
+        the <strong>team's final decision</strong>.
       </div>
     </div>
   </div>
@@ -52,16 +57,17 @@
       <hr>
       <h5 class="fw-semibold mb-2">Your Responsibilities</h5>
       <ul class="mb-3">
-        <li>Review the <strong>AI recommendation</strong> and the
-            <strong>Purchasing Analyst's choice</strong></li>
+        {% if has_ai and was_augmented %}
+        <li>Review the <strong>AI system's recommendation</strong></li>
+        {% endif %}
         <li>Evaluate suppliers on <strong>CSR criteria</strong>:
             human rights compliance, local community impact, and carbon footprint</li>
-        <li>Make the <strong>final team decision</strong> on which supplier to select</li>
+        <li>Submit your recommendation to the <strong>Purchasing Analyst</strong></li>
       </ul>
-      <h5 class="fw-semibold mb-2">Your Evaluation Criteria &amp; AI Weights</h5>
+      <h5 class="fw-semibold mb-2">Your Evaluation Criteria{% if has_ai and was_augmented %} &amp; AI Weights{% endif %}</h5>
       <table class="table table-sm table-bordered text-center">
         <thead class="table-light">
-          <tr><th>Criterion</th><th>AI Weight</th></tr>
+          <tr><th>Criterion</th><th>{% if has_ai and was_augmented %}AI {% endif %}Weight</th></tr>
         </thead>
         <tbody>
           <tr><td>Human Rights Compliance</td><td>33.3%</td></tr>
@@ -70,8 +76,9 @@
         </tbody>
       </table>
       <div class="alert alert-info mb-0">
-        <strong>Note:</strong> You make the <em>final</em> team decision. Consider both
-        the AI's recommendation and your partner's input when selecting a supplier.
+        <strong>Note:</strong> You decide <em>first</em>{% if has_ai and was_augmented %},
+        after reviewing the AI's recommendation{% endif %}. The Purchasing Analyst then
+        reviews your recommendation and makes the <strong>team's final decision</strong>.
       </div>
     </div>
   </div>

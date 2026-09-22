@@ -1,21 +1,33 @@
 """
 Trust in Human-AI Teams in B2B Supplier Selection
-oTree Experiment — __init__.py  (v5)
+oTree Experiment — __init__.py  (v6 — Option A: role-allocation redesign)
 
-Changes from v4:
-  - SYNC / ASYNC controlled via settings.py  'sync': True | False
-      sync=True  → BriefingWaitPage, SAWaitForPA, PAWaitForSA, RoundIntroWaitPage active
-      sync=False → WaitPages skipped (async, online delivery)
-  - AI POSITION controlled via settings.py  'ai_position': 'first' | 'middle'
-      first  → AI → PA → SA  (current design)
-      middle → PA (initial) → AI → PA (revised) → SA
-  - ACCURACY MODE controlled via settings.py  'accuracy_mode': 'fixed' | 'manipulation'
-      fixed        → draw once per round (70% chance each round independently)
-                     → true average 70%, not manipulated
+Changes from v5:
+  - ai_position ('first'/'middle') RETIRED. Replaced by augmented_role
+    ('principal'/'agent'), which controls WHICH team role is exposed to AI,
+    not WHEN within one role's own judgment process.
+  - Role order REVERSED: Sustainability Analyst (SA) now decides FIRST in
+    every condition (principal-agent framing: SA = principal, PA = agent).
+    Purchasing Analyst (PA) decides SECOND and renders the team's binding
+    final choice — a reversal from v5, where PA went first and SA was final.
+  - augmented_role='principal' → SA reviews AI's recommendation (transparency
+    applies here) + CSR criteria, decides; PA then reviews SA's decision +
+    purchasing criteria, with NO AI, and renders the final choice.
+  - augmented_role='agent'     → SA submits an independent CSR-only decision,
+    no AI; PA then reviews SA's decision + purchasing criteria + AI's
+    recommendation (transparency applies here), and renders the final choice.
+  - BLINDING: the non-augmented partner is never told the other's decision
+    involved AI. Full disclosure happens only in the Results-page debrief.
+  - has_ai=False (human control): SA decides first (CSR-only, no AI), PA
+    decides second (purchasing + SA's choice, no AI) — same role order as
+    the AI conditions, just with no AI anywhere.
+  - Per-round Δw is no longer shown as a raw number (only a qualitative
+    read + the round's money bonus). Exact Δw is revealed only once, in
+    the Results-page summary at the end of round 5.
+  - SYNC / ASYNC controlled via settings.py 'sync': True | False
+  - ACCURACY MODE controlled via settings.py 'accuracy_mode': 'fixed' | 'manipulation'
+      fixed        → draw once per round (true 70% average, not manipulated)
       manipulation → draw once per session (session fixed: always A or always E)
-                     → de facto High/Low accuracy manipulation
-  - ai_position stored in Group for template access
-  - PAInitialDecision page added for 'middle' position condition
 """
 
 import random
@@ -27,6 +39,10 @@ from otree.api import (
 # ─────────────────────────────────────────────
 # 1. CONSTANTS & SUPPLIER DATA
 # ─────────────────────────────────────────────
+
+# Fictional company used only for narrative framing (Briefing scenario).
+# Not a real company — invented for the experiment's cover story.
+SCENARIO_COMPANY = 'Auroria Energy'
 
 SUPPLIER_DATA = {
     'A': {   # optimal supplier
@@ -266,9 +282,23 @@ def compute_distance_bonus(dw_pa: float, dw_sa: float) -> float:
     return round(max(0.0, min(MAX_BONUS_PER_ROUND, bonus)), 4)
 
 
+def qualitative_gap(dw: float) -> str:
+    """Coarse, non-numeric read of a Δw gap for per-round display. Exact
+    figures are reserved for the Results-page summary at the end of round 5
+    (see Decision Log / Voice 127: revealing exact Δw every round let sharp
+    participants realize they had 'solved' the task and stop reconsidering)."""
+    if dw <= 0:
+        return "right on target"
+    if dw < DW_MAX * 0.2:
+        return "very close to optimal"
+    if dw < DW_MAX * 0.5:
+        return "a moderate gap from optimal"
+    return "a notable gap from optimal"
+
+
 def build_feedback_text(
     ai_recommendation: str,
-    sa_choice: str,
+    team_choice: str,
     transparency: str,
     dw_pa: float, dom_pa: str,
     dw_sa: float, dom_sa: str,
@@ -276,29 +306,31 @@ def build_feedback_text(
     level = 'high' if transparency == 'high' else 'low'
 
     if ai_recommendation == OPTIMAL_SUPPLIER:
-        pa_text = PA_FEEDBACK_AI_A.get(sa_choice, PA_FEEDBACK_AI_A['A'])[level]
-        sa_text = SA_FEEDBACK_AI_A.get(sa_choice, SA_FEEDBACK_AI_A['A'])[level]
+        pa_text = PA_FEEDBACK_AI_A.get(team_choice, PA_FEEDBACK_AI_A['A'])[level]
+        sa_text = SA_FEEDBACK_AI_A.get(team_choice, SA_FEEDBACK_AI_A['A'])[level]
     else:
-        pa_lut  = PA_FEEDBACK_AI_E.get(sa_choice, PA_FEEDBACK_AI_E['default'])
-        sa_lut  = SA_FEEDBACK_AI_E.get(sa_choice, SA_FEEDBACK_AI_E['default'])
+        pa_lut  = PA_FEEDBACK_AI_E.get(team_choice, PA_FEEDBACK_AI_E['default'])
+        sa_lut  = SA_FEEDBACK_AI_E.get(team_choice, SA_FEEDBACK_AI_E['default'])
         pa_text = pa_lut[level]
         sa_text = sa_lut[level]
 
     if transparency == 'high':
         pa_block = (
             f"[Purchasing Criteria]\n{pa_text}\n"
-            f"Δw (PA) = {dw_pa:.3f}  |  dominant gap: {dom_pa or '—'}"
+            f"Your team's choice was {qualitative_gap(dw_pa)}"
+            f"{' — dominant gap: ' + dom_pa if dom_pa else ''}."
         )
         sa_block = (
             f"[CSR Criteria]\n{sa_text}\n"
-            f"Δw (SA) = {dw_sa:.3f}  |  dominant gap: {dom_sa or '—'}"
+            f"Your team's choice was {qualitative_gap(dw_sa)}"
+            f"{' — dominant gap: ' + dom_sa if dom_sa else ''}."
         )
         return "\n\n".join([pa_block, sa_block])
     return f"{pa_text}\n\n{sa_text}"
 
 
 def build_feedback_text_control(
-    sa_choice: str,
+    team_choice: str,
     transparency: str,
     dw_pa: float, dom_pa: str,
     dw_sa: float, dom_sa: str,
@@ -310,12 +342,13 @@ def build_feedback_text_control(
     """
     if transparency == 'high':
         pa_block = (
-            f"[Purchasing Criteria]\nYour team selected Supplier {sa_choice}.\n"
-            f"Δw (PA) = {dw_pa:.3f}  |  dominant gap: {dom_pa or '—'}"
+            f"[Purchasing Criteria]\nYour team selected Supplier {team_choice}. "
+            f"That choice was {qualitative_gap(dw_pa)}"
+            f"{' — dominant gap: ' + dom_pa if dom_pa else ''}."
         )
         sa_block = (
-            f"[CSR Criteria]\n"
-            f"Δw (SA) = {dw_sa:.3f}  |  dominant gap: {dom_sa or '—'}"
+            f"[CSR Criteria]\nThat choice was {qualitative_gap(dw_sa)}"
+            f"{' — dominant gap: ' + dom_sa if dom_sa else ''}."
         )
         return "\n\n".join([pa_block, sa_block])
 
@@ -373,16 +406,14 @@ def creating_session(subsession):
     has_ai = subsession.session.config.get('has_ai', True)
 
     if not has_ai:
-        # HUMAN CONTROL condition: no AI recommendation is drawn or shown at all.
-        # group.transparency / ai_position / ai_recommendation stay at their
-        # model defaults (empty / 'first' placeholder — unused by any page
-        # when has_ai=False, since AIRecommendation/PAInitialDecision are
-        # both hidden in this condition).
+        # HUMAN CONTROL condition: no AI recommendation is drawn or shown at
+        # all. group.transparency / augmented_role / ai_recommendation stay
+        # blank — unused by any page when has_ai=False.
         return
 
-    transparency  = subsession.session.config.get('transparency',  'high')
-    ai_position   = subsession.session.config.get('ai_position',   'first')
-    accuracy_mode = subsession.session.config.get('accuracy_mode', 'fixed')
+    transparency   = subsession.session.config.get('transparency',   'high')
+    augmented_role = subsession.session.config.get('augmented_role', 'principal')
+    accuracy_mode  = subsession.session.config.get('accuracy_mode',  'fixed')
 
     if accuracy_mode == 'manipulation':
         if subsession.round_number == 1:
@@ -396,27 +427,28 @@ def creating_session(subsession):
 
     for group in subsession.get_groups():
         group.transparency      = transparency
-        group.ai_position       = ai_position
+        group.augmented_role    = augmented_role
         group.ai_recommendation = ai_rec
 
 
 class Group(BaseGroup):
     transparency      = models.StringField(initial='')
-    ai_position       = models.StringField(initial='first')
+    # 'principal' (SA is AI-augmented) or 'agent' (PA is AI-augmented).
+    # Blank when has_ai=False (human control — neither role sees AI).
+    augmented_role    = models.StringField(initial='')
     ai_recommendation = models.StringField(initial='')
-    pa_initial_choice = models.StringField(
-        choices=SUPPLIERS,
-        initial='',
-        label="Based solely on your own judgment, which supplier would you initially recommend?",
-    )
 
-    pa_choice = models.StringField(
-        choices=SUPPLIERS,
-        label="As Purchasing Analyst, which supplier do you recommend?"
-    )
+    # SA decides FIRST in every condition (principal-agent framing: SA is the
+    # principal issuing an initial, CSR-informed recommendation).
     sa_choice = models.StringField(
         choices=SUPPLIERS,
-        label="As Sustainability Analyst, which supplier do you select as the final choice?"
+        label="Based on the CSR criteria, which supplier do you recommend to the Purchasing Analyst?"
+    )
+    # PA decides SECOND and renders the team's binding final choice (the
+    # agent who executes/finalizes, informed by the SA's prior decision).
+    pa_choice = models.StringField(
+        choices=SUPPLIERS,
+        label="Considering your partner's recommendation and the purchasing criteria, which supplier does the team select?"
     )
 
     dw_pa                 = models.FloatField(initial=0.0)
@@ -424,16 +456,32 @@ class Group(BaseGroup):
     dominant_criterion_pa = models.StringField(initial='')
     dominant_criterion_sa = models.StringField(initial='')
 
+    # SA's OWN first-phase choice scored under her own CSR criteria — a
+    # genuine solo/pre-partner-input judgment quality measure, independent
+    # of whatever the team's eventual final choice (pa_choice) turns out to
+    # be. Useful for complementarity analyses (Paper 4) that need a solo
+    # baseline distinct from the team's final decision.
+    dw_sa_initial                 = models.FloatField(initial=0.0)
+    dominant_criterion_sa_initial = models.StringField(initial='')
+
     congruence_ai_pa = models.StringField(initial='')
     congruence_ai_sa = models.StringField(initial='')
     congruence_pa_sa = models.StringField(initial='')
     congruence_all   = models.StringField(initial='')
+    # Whether the AI's recommendation matched the choice of whichever role
+    # actually saw it this session (SA if principal-augmented, PA if
+    # agent-augmented) — the most direct advice-taking measure, independent
+    # of which role that happens to be. Blank when has_ai=False.
+    congruence_ai_augmented = models.StringField(initial='')
 
     ai_feedback_text  = models.LongStringField(initial='')
     round_bonus       = models.FloatField(initial=0.0)
 
     def set_performance(self):
-        team_choice = self.sa_choice
+        # The TEAM's binding final choice is now the PA's decision (PA acts
+        # second, informed by the SA's prior choice) — a reversal from the
+        # pre-Option-A design, where the SA's choice was the team's final one.
+        team_choice = self.pa_choice
 
         dw_pa, dom_pa = compute_dw(team_choice, 'pa')
         self.dw_pa                 = dw_pa
@@ -443,6 +491,12 @@ class Group(BaseGroup):
         self.dw_sa                 = dw_sa
         self.dominant_criterion_sa = dom_sa
 
+        # SA's own solo judgment quality, evaluated on her own first-phase
+        # choice (sa_choice) rather than the team's eventual final choice.
+        dw_sa_init, dom_sa_init          = compute_dw(self.sa_choice, 'sa')
+        self.dw_sa_initial               = dw_sa_init
+        self.dominant_criterion_sa_initial = dom_sa_init
+
         self.round_bonus = compute_distance_bonus(dw_pa, dw_sa)
 
         # 🛡️ 안전장치: group.transparency가 비어있으면 session config에서 가져옴
@@ -451,14 +505,14 @@ class Group(BaseGroup):
         if self.session.config.get('has_ai', True):
             self.ai_feedback_text = build_feedback_text(
                 ai_recommendation=self.ai_recommendation,
-                sa_choice=team_choice,
+                team_choice=team_choice,
                 transparency=transparency_val,
                 dw_pa=dw_pa, dom_pa=dom_pa,
                 dw_sa=dw_sa, dom_sa=dom_sa,
             )
         else:
             self.ai_feedback_text = build_feedback_text_control(
-                sa_choice=team_choice,
+                team_choice=team_choice,
                 transparency=transparency_val,
                 dw_pa=dw_pa, dom_pa=dom_pa,
                 dw_sa=dw_sa, dom_sa=dom_sa,
@@ -608,16 +662,6 @@ class Player(BasePlayer):
         ],
         widget=widgets.RadioSelect,
     )
-    comprehension_q3 = models.StringField(
-        label="What does a lower Δw score indicate?",
-        choices=[
-            ['a', 'A) Greater disagreement between the Purchasing Analyst and the Sustainability Analyst'],
-            ['b', 'B) The team\'s final choice is closer to the theoretically optimal supplier'],
-            ['c', 'C) The AI system made a recommendation error'],
-            ['d', 'D) A higher performance bonus was earned'],
-        ],
-        widget=widgets.RadioSelect,
-    )
     comprehension_score = models.IntegerField(initial=0)
 
     age = models.IntegerField(label="Your age", min=18, max=80)
@@ -704,14 +748,13 @@ class ComprehensionCheck(Page):
     def is_displayed(player): return is_round_1(player)
 
     form_model  = 'player'
-    form_fields = ['comprehension_q1', 'comprehension_q2', 'comprehension_q3']
+    form_fields = ['comprehension_q1', 'comprehension_q2']
 
     @staticmethod
     def before_next_page(player, timeout_happened):
         correct = {
-            'comprehension_q1': 'c',
+            'comprehension_q1': 'b',  # PA renders the team's final choice (Option A)
             'comprehension_q2': 'b',
-            'comprehension_q3': 'b',
         }
         score = sum(
             1 for field, answer in correct.items()
@@ -732,7 +775,12 @@ class RoleAssignment(Page):
     def vars_for_template(player):
         role = C.ROLE_PA if is_pa(player) else C.ROLE_SA
         player.role_label = role
-        return {'role': role, 'is_pa': is_pa(player)}
+        return {
+            'role':            role,
+            'is_pa':           is_pa(player),
+            'has_ai':          has_ai(player),
+            'was_augmented':   was_augmented(player),
+        }
 
 
 class Briefing(Page):
@@ -762,12 +810,15 @@ class Briefing(Page):
             })
 
         return {
-            'is_pa':                 is_pa(player),
-            'has_ai':                has_ai(player),
-            'pa_rows':               pa_rows,
-            'sa_rows':               sa_rows,
-            'ai_weights_pa':         AI_WEIGHTS_PA,
-            'ai_weights_sa':         AI_WEIGHTS_SA,
+            'is_pa':                  is_pa(player),
+            'has_ai':                 has_ai(player),
+            'is_principal_augmented': is_augmented_principal(player),
+            'is_agent_augmented':     is_augmented_agent(player),
+            'company_name':           SCENARIO_COMPANY,
+            'pa_rows':                pa_rows,
+            'sa_rows':                sa_rows,
+            'ai_weights_pa':          AI_WEIGHTS_PA,
+            'ai_weights_sa':          AI_WEIGHTS_SA,
             'round_repeat_rationale': C.ROUND_REPEAT_RATIONALE,
         }
 
@@ -785,19 +836,20 @@ class RoundIntro(Page):
             prev_round_data = {
                 'round_number': prev.round_number,
                 'ai_rec':       prev_group.ai_recommendation,
-                'pa_choice':    prev_group.pa_choice,
                 'sa_choice':    prev_group.sa_choice,
-                'dw_pa':        prev_group.dw_pa,
-                'dw_sa':        prev_group.dw_sa,
+                'pa_choice':    prev_group.pa_choice,
                 'congruence':   prev_group.congruence_all,
                 'round_bonus':  prev_group.round_bonus,
-                'optimal':      prev_group.sa_choice == OPTIMAL_SUPPLIER,
+                'optimal':      prev_group.pa_choice == OPTIMAL_SUPPLIER,
             }
 
         return {
             'round_number':    player.round_number,
             'prev_round_data': prev_round_data,
             'is_pa':           is_pa(player),
+            'has_ai':          has_ai(player),
+            'is_principal_augmented': is_augmented_principal(player),
+            'is_agent_augmented':     is_augmented_agent(player),
         }
 
 
@@ -807,14 +859,25 @@ def is_sync(player):
 def is_async(player):
     return not player.session.config.get('sync', True)
 
-def is_position_middle(player):
-    return player.session.config.get('ai_position', 'first') == 'middle'
-
-def is_position_first(player):
-    return player.session.config.get('ai_position', 'first') == 'first'
-
 def has_ai(player):
     return player.session.config.get('has_ai', True)
+
+def augmented_role(player):
+    """'principal' | 'agent' | '' (blank when has_ai=False)."""
+    return player.session.config.get('augmented_role', 'principal') if has_ai(player) else ''
+
+def is_augmented_principal(player):
+    return has_ai(player) and augmented_role(player) == 'principal'
+
+def is_augmented_agent(player):
+    return has_ai(player) and augmented_role(player) == 'agent'
+
+def was_augmented(player):
+    """True if THIS player's role was the one exposed to AI this session."""
+    if not has_ai(player):
+        return False
+    role = augmented_role(player)
+    return (role == 'principal' and is_sa(player)) or (role == 'agent' and is_pa(player))
 
 
 class BriefingWaitPage(WaitPage):
@@ -835,140 +898,14 @@ class RoundIntroWaitPage(WaitPage):
     body_text  = "Please wait while your partner is ready for the next round."
 
 
-class PAInitialDecision(Page):
-    @staticmethod
-    def is_displayed(player):
-        return has_ai(player) and is_pa(player) and is_position_middle(player)
-
-    form_model  = 'group'
-    form_fields = ['pa_initial_choice']
-
-    @staticmethod
-    def vars_for_template(player):
-        score_rows = []
-        for sup in SUPPLIERS:
-            pa_sc = SUPPLIER_DATA[sup]['pa']
-            pa_total = sum(pa_sc[c] * AI_WEIGHTS_PA[c] for c in AI_WEIGHTS_PA)
-            score_rows.append({
-                'supplier':   sup,
-                'cost':       pa_sc['cost'],
-                'delivery':   pa_sc['delivery'],
-                'innovation': pa_sc['innovation'],
-                'pa_total':   round(pa_total, 3),
-            })
-        return {
-            'score_rows':    score_rows,
-            'ai_weights_pa': AI_WEIGHTS_PA,
-            'round_number':  player.round_number,
-        }
-
-
-class SAWaitForPAInitial(WaitPage):
-    @staticmethod
-    def is_displayed(player):
-        return has_ai(player) and is_sa(player) and is_sync(player) and is_position_middle(player)
-    title_text = "Waiting for the Purchasing Analyst…"
-    body_text  = "Your partner is making their initial supplier assessment. Please wait."
-
-
-class SAWaitForPA(WaitPage):
-    @staticmethod
-    def is_displayed(player):
-        return is_sa(player) and is_sync(player)
-    title_text = "Waiting for the Purchasing Analyst…"
-    body_text  = "Your partner is reviewing the information and making a decision. Please wait."
-
-
-class PAWaitForSA(WaitPage):
-    @staticmethod
-    def is_displayed(player):
-        return is_pa(player) and is_sync(player)
-    title_text = "Waiting for the Sustainability Analyst…"
-    body_text  = "Your partner is making the final supplier selection. Please wait."
-
-
-class AIRecommendation(Page):
-    @staticmethod
-    def is_displayed(player): return has_ai(player) and is_pa(player)
-
-    form_model  = 'group'
-    form_fields = ['pa_choice']
-
-    @staticmethod
-    def vars_for_template(player):
-        group        = player.group
-        transparency = group.transparency or player.session.config.get('transparency', 'low')
-        ai_rec       = group.ai_recommendation
-        rnd          = player.round_number
-
-        if not ai_rec:
-            ai_rec = player.session.vars.get('ai_recommendation', 'A')
-            group.ai_recommendation = ai_rec
-
-        round_explanation = ROUND_EXPLANATIONS.get(ai_rec, {}).get(rnd, '')
-
-        score_rows = []
-        for sup in SUPPLIERS:
-            pa_sc = SUPPLIER_DATA[sup]['pa']
-            pa_total = sum(pa_sc[c] * AI_WEIGHTS_PA[c] for c in AI_WEIGHTS_PA)
-            score_rows.append({
-                'supplier':   sup,
-                'cost':       pa_sc['cost'],
-                'delivery':   pa_sc['delivery'],
-                'innovation': pa_sc['innovation'],
-                'pa_total':   round(pa_total, 3),
-            })
-
-        return {
-            'transparency':            transparency,
-            'ai_recommendation':       ai_rec,
-            'round_explanation':       round_explanation,
-            'score_rows':              score_rows,
-            'ai_weights_pa':           AI_WEIGHTS_PA,
-            'is_high':                 transparency == 'high',
-            'round_number':            rnd,
-            'ai_position':             group.ai_position,
-            'is_middle':               group.ai_position == 'middle',
-            'pa_initial_choice':       group.pa_initial_choice,
-        }
-
-
-class PADecisionControl(Page):
-    """
-    HUMAN CONTROL condition (has_ai=False): PA makes a single supplier
-    decision directly from the purchasing data, with no AI recommendation
-    shown at all. Structurally parallel to the 'first' AI-position condition
-    with the AI step removed — same single pa_choice submission point, same
-    downstream fields (pa_choice) so SADecision / RoundFeedback / Results
-    work unchanged regardless of has_ai.
-    """
-    @staticmethod
-    def is_displayed(player): return (not has_ai(player)) and is_pa(player)
-
-    form_model  = 'group'
-    form_fields = ['pa_choice']
-
-    @staticmethod
-    def vars_for_template(player):
-        score_rows = []
-        for sup in SUPPLIERS:
-            pa_sc = SUPPLIER_DATA[sup]['pa']
-            pa_total = sum(pa_sc[c] * AI_WEIGHTS_PA[c] for c in AI_WEIGHTS_PA)
-            score_rows.append({
-                'supplier':   sup,
-                'cost':       pa_sc['cost'],
-                'delivery':   pa_sc['delivery'],
-                'innovation': pa_sc['innovation'],
-                'pa_total':   round(pa_total, 3),
-            })
-        return {
-            'score_rows':    score_rows,
-            'ai_weights_pa': AI_WEIGHTS_PA,
-            'round_number':  player.round_number,
-        }
-
-
 class SADecision(Page):
+    """
+    SA decides FIRST in every condition (principal-agent framing: SA is the
+    principal). When augmented_role='principal' (and has_ai), SA sees the
+    AI's recommendation (transparency-conditional) alongside the CSR
+    criteria. Otherwise (augmented_role='agent', or has_ai=False), SA
+    decides independently from the CSR criteria alone — no AI shown.
+    """
     @staticmethod
     def is_displayed(player): return is_sa(player)
 
@@ -978,7 +915,18 @@ class SADecision(Page):
     @staticmethod
     def vars_for_template(player):
         group        = player.group
+        shows_ai     = is_augmented_principal(player)
         transparency = group.transparency or player.session.config.get('transparency', 'low')
+        rnd          = player.round_number
+
+        ai_rec = ''
+        round_explanation = ''
+        if shows_ai:
+            ai_rec = group.ai_recommendation
+            if not ai_rec:
+                ai_rec = player.session.vars.get('ai_recommendation', 'A')
+                group.ai_recommendation = ai_rec
+            round_explanation = ROUND_EXPLANATIONS.get(ai_rec, {}).get(rnd, '')
 
         score_rows = []
         for sup in SUPPLIERS:
@@ -993,29 +941,102 @@ class SADecision(Page):
             })
 
         return {
-            'transparency':  transparency,
-            'pa_choice':     group.pa_choice,
-            'score_rows':    score_rows,
-            'ai_weights_sa': AI_WEIGHTS_SA,
-            'is_high':       transparency == 'high',
-            'round_number':  player.round_number,
+            'shows_ai':          shows_ai,
+            'transparency':      transparency,
+            'ai_recommendation': ai_rec,
+            'round_explanation': round_explanation,
+            'score_rows':        score_rows,
+            'ai_weights_sa':     AI_WEIGHTS_SA,
+            'is_high':           transparency == 'high',
+            'round_number':      rnd,
+        }
+
+
+class PAWaitForSA(WaitPage):
+    @staticmethod
+    def is_displayed(player):
+        return is_pa(player) and is_sync(player)
+    title_text = "Waiting for the Sustainability Analyst…"
+    body_text  = "Your partner is reviewing the information and submitting an initial recommendation. Please wait."
+
+
+class PADecision(Page):
+    """
+    PA decides SECOND in every condition and renders the team's binding
+    final choice (the agent who executes/finalizes). PA always sees the
+    SA's prior decision, framed simply as "your partner's recommendation"
+    — never revealing whether that decision involved AI (blinding, see
+    module docstring). When augmented_role='agent' (and has_ai), PA also
+    sees the AI's own recommendation (transparency-conditional) alongside
+    the purchasing criteria. Otherwise, PA decides from the purchasing
+    criteria and the partner's choice alone — no AI shown.
+    """
+    @staticmethod
+    def is_displayed(player): return is_pa(player)
+
+    form_model  = 'group'
+    form_fields = ['pa_choice']
+
+    @staticmethod
+    def vars_for_template(player):
+        group        = player.group
+        shows_ai     = is_augmented_agent(player)
+        transparency = group.transparency or player.session.config.get('transparency', 'low')
+        rnd          = player.round_number
+
+        ai_rec = ''
+        round_explanation = ''
+        if shows_ai:
+            ai_rec = group.ai_recommendation
+            if not ai_rec:
+                ai_rec = player.session.vars.get('ai_recommendation', 'A')
+                group.ai_recommendation = ai_rec
+            round_explanation = ROUND_EXPLANATIONS.get(ai_rec, {}).get(rnd, '')
+
+        score_rows = []
+        for sup in SUPPLIERS:
+            pa_sc = SUPPLIER_DATA[sup]['pa']
+            pa_total = sum(pa_sc[c] * AI_WEIGHTS_PA[c] for c in AI_WEIGHTS_PA)
+            score_rows.append({
+                'supplier':   sup,
+                'cost':       pa_sc['cost'],
+                'delivery':   pa_sc['delivery'],
+                'innovation': pa_sc['innovation'],
+                'pa_total':   round(pa_total, 3),
+            })
+
+        return {
+            'shows_ai':          shows_ai,
+            'transparency':      transparency,
+            'ai_recommendation': ai_rec,
+            'round_explanation': round_explanation,
+            'score_rows':        score_rows,
+            'ai_weights_pa':     AI_WEIGHTS_PA,
+            'is_high':           transparency == 'high',
+            'round_number':      rnd,
+            'sa_choice':         group.sa_choice,
         }
 
     @staticmethod
     def before_next_page(player, timeout_happened):
-        if not is_sa(player):
+        if not is_pa(player):
             return
 
         group = player.group
         group.set_performance()
 
-        ai = group.ai_recommendation
-        pa = group.pa_choice
-        sa = group.sa_choice
+        ai   = group.ai_recommendation
+        sa   = group.sa_choice
+        pa   = group.pa_choice
+        role = group.augmented_role
 
         group.congruence_pa_sa = 'agree' if pa == sa else 'disagree'
 
         if has_ai(player):
+            # The AI was only shown to whichever role is augmented this
+            # session — compare it against that role's choice, not always PA.
+            augmented_choice = sa if role == 'principal' else pa
+            group.congruence_ai_augmented = 'agree' if ai == augmented_choice else 'disagree'
             group.congruence_ai_pa = 'agree' if ai == pa else 'disagree'
             group.congruence_ai_sa = 'agree' if ai == sa else 'disagree'
             if ai == pa == sa:
@@ -1027,9 +1048,18 @@ class SADecision(Page):
         else:
             # HUMAN CONTROL: no AI vertex exists, so AI-congruence fields are
             # not applicable — left blank rather than misleadingly 'disagree'.
+            group.congruence_ai_augmented = ''
             group.congruence_ai_pa = ''
             group.congruence_ai_sa = ''
             group.congruence_all  = group.congruence_pa_sa
+
+
+class SAWaitForPA(WaitPage):
+    @staticmethod
+    def is_displayed(player):
+        return is_sa(player) and is_sync(player)
+    title_text = "Waiting for the Purchasing Analyst…"
+    body_text  = "Your partner is reviewing your recommendation and making the team's final decision. Please wait."
 
 
 class RoundFeedback(Page):
@@ -1045,23 +1075,21 @@ class RoundFeedback(Page):
             'next_round_number': player.round_number + 1,
             'has_ai':            has_ai(player),
             'ai_recommendation': group.ai_recommendation,
-            'pa_choice':         group.pa_choice,
             'sa_choice':         group.sa_choice,
-            'dw_pa':             group.dw_pa,
-            'dw_sa':             group.dw_sa,
-            'dominant_pa':       group.dominant_criterion_pa,
-            'dominant_sa':       group.dominant_criterion_sa,
+            'pa_choice':         group.pa_choice,
+            'is_principal_augmented': is_augmented_principal(player),
+            'is_agent_augmented':     is_augmented_agent(player),
+            # No raw Δw here by design — exact figures are reserved for the
+            # Results-page summary at the end of round 5 (Voice 127 decision).
             'feedback_text':     group.ai_feedback_text,
             'feedback_paragraphs': [p for p in group.ai_feedback_text.split('\n\n') if p.strip()],
             'transparency':      transparency_val,
             'is_high':           transparency_val == 'high',
             'congruence_all':    group.congruence_all,
-            'congruence_ai_pa':  group.congruence_ai_pa,
-            'congruence_ai_sa':  group.congruence_ai_sa,
+            'congruence_ai_augmented': group.congruence_ai_augmented,
             'congruence_pa_sa':  group.congruence_pa_sa,
             'round_bonus':       group.round_bonus,
             'max_bonus':         MAX_BONUS_PER_ROUND,
-            'dw_explanation':    C.DW_EXPLANATION,
         }
 
 
@@ -1074,14 +1102,16 @@ class TrustSurvey(Page):
     @staticmethod
     def get_form_fields(player):
         # AI-directed trust items (reliability/functionality/helpfulness/
-        # transparency) only make sense when an AI was actually present.
-        # The human-control condition keeps only the team/interpersonal
-        # trust items, which apply regardless of has_ai.
+        # transparency) only make sense for whichever role actually saw the
+        # AI this session (was_augmented) — NOT simply has_ai, since under
+        # Option A one of the two roles never encounters the AI even when
+        # has_ai=True. The non-augmented role (and both roles under the
+        # human-control condition) keeps only the team/interpersonal items.
         team_fields = [
             'trust_team_1', 'trust_team_2',
             'trust_interpersonal_1', 'trust_interpersonal_2',
         ]
-        if has_ai(player):
+        if was_augmented(player):
             return [
                 'trust_reliability_1', 'trust_reliability_2',
                 'trust_reliability_3', 'trust_reliability_4',
@@ -1098,16 +1128,16 @@ class TrustSurvey(Page):
                 "Please answer the following questions based on your experience "
                 "working with your partner during the five rounds."
             )
-        elif is_sa(player):
-            survey_intro = (
-                "As the Sustainability Analyst, you did not interact with the AI system directly. "
-                "Please answer the following questions based on your impression of how AI "
-                "influenced the overall team process and your partner's decisions."
-            )
-        else:
+        elif was_augmented(player):
             survey_intro = (
                 "Please answer the following questions based on your experience "
                 "with the AI system during the five rounds."
+            )
+        else:
+            survey_intro = (
+                "You did not interact with the AI system directly this session. "
+                "Please answer the following questions based on your impression of how AI "
+                "influenced the overall team process and your partner's decisions."
             )
 
         return {
@@ -1116,7 +1146,7 @@ class TrustSurvey(Page):
             'scale_7_na':    [0] + list(range(1, 8)),
             'scale_5_na':    [0] + list(range(1, 6)),
             'survey_intro':  survey_intro,
-            'is_sa':         is_sa(player),
+            'was_augmented': was_augmented(player),
             'has_ai':        has_ai(player),
             'scale_note': (
                 "Note: some questions may appear similar. Each item measures "
@@ -1148,7 +1178,9 @@ class Results(Page):
 
         player.payoff = total_bonus
 
-        optimal_rounds = sum(1 for p in all_rounds if p.group.sa_choice == OPTIMAL_SUPPLIER)
+        # The team's binding final choice is now the PA's decision (Option A:
+        # PA acts second, informed by the SA's prior choice).
+        optimal_rounds = sum(1 for p in all_rounds if p.group.pa_choice == OPTIMAL_SUPPLIER)
 
         # 🛡️ 안전장치: group.transparency가 비어있으면 session.config에서 가져옴
         transparency_val = player.group.transparency or player.session.config.get('transparency', 'low')
@@ -1177,22 +1209,43 @@ class Results(Page):
                     "average) — so its reliability could vary from round to round."
                 )
 
+        # Blinding disclosure: during the task, the non-augmented partner was
+        # never told the other's decision involved AI (see module docstring).
+        # The approved consent protocol promises full disclosure in this
+        # debrief, so the non-augmented role learns it here for the first time.
+        debrief_blinding_text = ''
+        if has_ai(player) and not was_augmented(player):
+            if augmented_role(player) == 'principal':
+                debrief_blinding_text = (
+                    "One thing we did not tell you during the task: your partner's "
+                    "initial recommendation (as Sustainability Analyst) was made with "
+                    "the help of the AI system's recommendation. You were only shown "
+                    "your partner's resulting recommendation, not that the AI was involved."
+                )
+            else:
+                debrief_blinding_text = (
+                    "One thing we did not tell you during the task: your partner's "
+                    "final decision (as Purchasing Analyst) was made with the help of "
+                    "the AI system's recommendation, in addition to your own "
+                    "recommendation. You were not told that the AI was involved."
+                )
+
         round_summary = []
         for p in all_rounds:
             g = p.group
-            sa_choice = g.sa_choice or ''
+            pa_choice = g.pa_choice or ''
             round_summary.append({
                 'round':       p.round_number,
                 'ai_rec':      g.ai_recommendation or '',
-                'pa_choice':   g.pa_choice or '',
-                'sa_choice':   sa_choice,
+                'sa_choice':   g.sa_choice or '',
+                'pa_choice':   pa_choice,
                 'dw_pa':       g.dw_pa or 0.0,
                 'dw_sa':       g.dw_sa or 0.0,
                 'dom_pa':      g.dominant_criterion_pa or '',
                 'dom_sa':      g.dominant_criterion_sa or '',
                 'congruence':  g.congruence_all or '',
                 'round_bonus': g.round_bonus or 0.0,
-                'optimal':     sa_choice == OPTIMAL_SUPPLIER if sa_choice else False,
+                'optimal':     pa_choice == OPTIMAL_SUPPLIER if pa_choice else False,
             })
 
         return {
@@ -1205,6 +1258,7 @@ class Results(Page):
             'round_summary':     round_summary,
             'has_ai':            has_ai(player),
             'debrief_accuracy_text': debrief_accuracy_text,
+            'debrief_blinding_text': debrief_blinding_text,
             'contact_email':     'jian.lee03@kedgebs.com',
         }
 
@@ -1221,13 +1275,11 @@ page_sequence = [
     BriefingWaitPage,       # sync=True + Round 1 only
     RoundIntro,             # Rounds 2-5, shows previous round summary
     RoundIntroWaitPage,     # sync=True + Rounds 2-5 only
-    PAInitialDecision,      # PA only + has_ai=True + ai_position='middle' only
-    SAWaitForPAInitial,     # SA only + sync=True + has_ai=True + ai_position='middle' only
-    AIRecommendation,       # PA only + has_ai=True (sees AI + submits final choice)
-    PADecisionControl,      # PA only + has_ai=False (no AI shown, single decision)
-    SAWaitForPA,            # SA only + sync=True (waits after PA submits, either path)
-    SADecision,             # SA only
-    PAWaitForSA,            # PA only + sync=True only
+    SADecision,             # SA only — decides FIRST (with AI if principal-augmented, else solo)
+    PAWaitForSA,            # PA only + sync=True (waits while SA decides)
+    PADecision,             # PA only — decides SECOND, renders team's final choice
+                            #   (with AI if agent-augmented, else sees only SA's choice)
+    SAWaitForPA,            # SA only + sync=True (waits while PA finalizes)
     RoundFeedback,          # Rounds 1-4 only
     TrustSurvey,            # Round 5 only
     Demographics,           # Round 5 only

@@ -1,0 +1,56 @@
+Fix creating_session bug, add human control condition, address pilot feedback
+
+CRITICAL FIX
+- creating_session() was defined as a Subsession method; oTree looks it up as
+  a module-level function and silently skipped it. Moved to module scope
+  (no-self style) — this was the root cause of AI recommendations always
+  defaulting to 'A'.
+
+NEW: Human control condition (has_ai flag)
+- Added lab_control / online_control session configs (no AI at all)
+- New has_ai config flag threaded through creating_session, page
+  is_displayed conditions, and all templates
+- New PADecisionControl page: PA submits a single choice with no AI shown,
+  structurally parallel to the 'first' AI-position condition
+- TrustSurvey: AI-directed items (reliability/functionality/helpfulness/
+  transparency) dynamically excluded via get_form_fields() when has_ai=False;
+  team/interpersonal trust items retained for the control condition
+- RoundFeedback: new build_feedback_text_control() reports team performance
+  without referencing an AI; congruence_ai_* fields no longer computed
+  against a blank AI recommendation
+- Briefing / Results: has_ai-aware copy and debrief text
+
+BUG FIXES
+- pa_initial_choice was missing choices=SUPPLIERS, so it rendered as a free
+  text input instead of a dropdown like pa_choice/sa_choice
+- RadioSelectHorizontal replaced with RadioSelect (vertical) across
+  BaselineTrust and TrustSurvey — horizontal 7-point scales were hard to
+  click, especially in narrow/split browser windows
+
+CONSENT & COMPLIANCE
+- Consent.html rewritten to match the KEDGE/DPO-approved consent form:
+  control-condition disclosure, deception notice, corrected compensation
+  language, updated data retention period, expanded GDPR rights, CNIL
+  complaint right
+- Added consent_future_reuse field: separate, independent consent item for
+  reuse of anonymised data in future studies (not a condition of
+  participation)
+- Results.html debrief expanded: data withdrawal window, "not a performance
+  evaluation" reassurance, accuracy_mode-specific explanation, contact info
+  repeated at the end
+
+CONTENT FIXES (pilot feedback)
+- Briefing: removed citation (Dickson 1966; Weber et al. 1991) and
+  simplified score explanation to a single sentence
+- ComprehensionCheck: removed reference to a "return to briefing" link that
+  did not exist
+
+COMPENSATION
+- participation_fee: 8.00 -> 10.00 EUR
+- MAX_BONUS_PER_ROUND: 0.20 -> 1.00 EUR (max total 10-15 EUR, matching the
+  approved consent form)
+
+REMOVED
+- All temporary debug instrumentation from the creating_session
+  investigation (prints, session.vars debug counters, debug build tag,
+  yellow debug box in AIRecommendation.html)

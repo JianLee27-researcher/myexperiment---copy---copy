@@ -24,24 +24,26 @@
         <table class="table table-sm table-bordered text-center mb-3">
           <thead class="table-dark">
             <tr>
+              {% if has_ai %}
               <th>AI Recommendation</th>
-              <th>PA Choice</th>
-              <th>Team Decision (SA)</th>
+              {% endif %}
+              <th>SA Recommendation</th>
+              <th>Team's Final Decision (PA)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
+              {% if has_ai %}
               <td>
                 <span class="badge bg-dark">{{ prev_round_data.ai_rec }}</span>
               </td>
+              {% endif %}
               <td>
-                <span class="badge {% if prev_round_data.pa_choice == prev_round_data.ai_rec %}bg-success{% else %}bg-secondary{% endif %}">
-                  {{ prev_round_data.pa_choice }}
-                </span>
+                <span class="badge bg-success">{{ prev_round_data.sa_choice }}</span>
               </td>
               <td>
                 <span class="badge {% if prev_round_data.optimal %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                  {{ prev_round_data.sa_choice }}
+                  {{ prev_round_data.pa_choice }}
                 </span>
                 {% if prev_round_data.optimal %}
                   <br><small class="text-success">✓ Optimal choice</small>
@@ -51,26 +53,7 @@
           </tbody>
         </table>
 
-        <div class="row g-2 text-center mb-2">
-          <div class="col-6">
-            <div class="border rounded p-2 bg-white">
-              <div class="text-muted small">PA Gap (Δw)</div>
-              <div class="fw-bold {% if prev_round_data.dw_pa == 0 %}text-success{% elif prev_round_data.dw_pa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
-                {{ prev_round_data.dw_pa }}
-              </div>
-            </div>
-          </div>
-          <div class="col-6">
-            <div class="border rounded p-2 bg-white">
-              <div class="text-muted small">SA Gap (Δw)</div>
-              <div class="fw-bold {% if prev_round_data.dw_sa == 0 %}text-success{% elif prev_round_data.dw_sa < 0.2 %}text-warning{% else %}text-danger{% endif %}">
-                {{ prev_round_data.dw_sa }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="text-center">
+        <div class="text-center mb-2">
           <span class="badge bg-info text-dark">
             Round bonus: €{{ prev_round_data.round_bonus }}
           </span>
@@ -90,9 +73,18 @@
     <div class="alert alert-light border text-start mb-4">
       <strong>Reminder — Process this round:</strong>
       <ol class="mb-0 mt-2">
-        <li>The AI system provides its recommendation.</li>
-        <li>The <strong>Purchasing Analyst</strong> reviews it and submits their choice.</li>
-        <li>The <strong>Sustainability Analyst</strong> makes the final team decision.</li>
+        {% if has_ai and is_principal_augmented %}
+        <li>The AI system provides its recommendation to the <strong>Sustainability Analyst</strong>.</li>
+        <li>The <strong>Sustainability Analyst</strong> reviews it and submits a recommendation.</li>
+        <li>The <strong>Purchasing Analyst</strong> reviews that recommendation and makes the team's final decision.</li>
+        {% elif has_ai and is_agent_augmented %}
+        <li>The <strong>Sustainability Analyst</strong> submits an independent recommendation.</li>
+        <li>The AI system provides its recommendation to the <strong>Purchasing Analyst</strong>.</li>
+        <li>The <strong>Purchasing Analyst</strong> reviews both and makes the team's final decision.</li>
+        {% else %}
+        <li>The <strong>Sustainability Analyst</strong> submits a recommendation.</li>
+        <li>The <strong>Purchasing Analyst</strong> reviews it and makes the team's final decision.</li>
+        {% endif %}
       </ol>
     </div>
 

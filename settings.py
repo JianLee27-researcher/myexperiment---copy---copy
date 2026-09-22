@@ -1,22 +1,32 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# settings.py — Trust in Human-AI Teams (v5)
+# settings.py — Trust in Human-AI Teams (v6 — Option A: role-allocation redesign)
 #
 # FOUR PARAMETERS control the experiment design:
 #
 #   has_ai         : True | False
 #                    True  → AI recommendation system is present (all configs below)
-#                    False → HUMAN CONTROL condition: no AI at all. PA makes a single
-#                            decision directly (no AIRecommendation page), passed to SA.
-#                            transparency / ai_position / accuracy_mode are ignored
-#                            (irrelevant) when has_ai=False.
+#                    False → HUMAN CONTROL condition: no AI at all. SA decides first
+#                            (CSR-only), PA decides second (purchasing + SA's choice)
+#                            and renders the team's final choice. transparency /
+#                            augmented_role / accuracy_mode are ignored when has_ai=False.
 #
 #   transparency   : 'high' | 'low'
 #                    High → AI explains reasoning + shows weights + score table
 #                    Low  → AI gives recommendation only, no explanation
 #
-#   ai_position    : 'first' | 'middle'
-#                    first  → AI → PA → SA
-#                    middle → PA(initial) → AI → PA(revised) → SA
+#   augmented_role : 'principal' | 'agent'
+#                    principal → SA (who decides first) reviews the AI's
+#                                recommendation; PA then reviews SA's decision with
+#                                NO AI, and renders the final choice.
+#                    agent     → SA submits an independent, CSR-only decision with
+#                                no AI; PA then reviews SA's decision AND the AI's
+#                                recommendation, and renders the final choice.
+#                    In neither case is the non-augmented partner told the other's
+#                    decision involved AI (blinded — see __init__.py docstring).
+#                    REPLACES the retired 'ai_position' ('first'/'middle') variable,
+#                    which controlled WHEN within one role's own judgment AI
+#                    appeared. augmented_role instead controls WHICH role is
+#                    exposed to AI at all.
 #
 #   accuracy_mode  : 'fixed' | 'manipulation'
 #                    fixed        → draw per round (true 70% average, not manipulated)
@@ -26,11 +36,10 @@
 #                    True  → Lab setting: WaitPages active, both players online together
 #                    False → Online setting: WaitPages skipped, async delivery
 #
-# CURRENT PLAN: 2×2 design (transparency × position), accuracy_mode='fixed'
+# CURRENT PLAN: 2×2 design (transparency × augmented_role), accuracy_mode='fixed'
 #   → Use the 4 sessions marked ★ MAIN below
 #
-# CONTROL: 'lab_control' / 'online_control' (has_ai=False) — human-only baseline,
-#   structurally comparable to the 'first' AI-position condition (single PA decision).
+# CONTROL: 'lab_control' / 'online_control' (has_ai=False) — human-only baseline.
 #
 # ALL 8 AI COMBINATIONS + 2 CONTROL CONFIGS are defined for flexibility.
 # ─────────────────────────────────────────────────────────────────────────────
@@ -59,50 +68,50 @@ SESSION_CONFIGS = [
     ),
 
     # ══════════════════════════════════════════════════════════════
-    # ★ MAIN — Lab, First position, Fixed accuracy (2×2 design)
+    # ★ MAIN — Lab, Fixed accuracy (2×2 design: Transparency × Role Allocation)
     # ══════════════════════════════════════════════════════════════
 
     dict(
-        name='lab_first_high',
-        display_name='★ Lab | First | High Transparency | Fixed Accuracy',
+        name='lab_principal_high',
+        display_name='★ Lab | Principal-augmented | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='fixed',
         sync=True,
     ),
     dict(
-        name='lab_first_low',
-        display_name='★ Lab | First | Low Transparency | Fixed Accuracy',
+        name='lab_principal_low',
+        display_name='★ Lab | Principal-augmented | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='fixed',
         sync=True,
     ),
     dict(
-        name='lab_middle_high',
-        display_name='★ Lab | Middle | High Transparency | Fixed Accuracy',
+        name='lab_agent_high',
+        display_name='★ Lab | Agent-augmented | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='fixed',
         sync=True,
     ),
     dict(
-        name='lab_middle_low',
-        display_name='★ Lab | Middle | Low Transparency | Fixed Accuracy',
+        name='lab_agent_low',
+        display_name='★ Lab | Agent-augmented | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='fixed',
         sync=True,
     ),
@@ -112,95 +121,95 @@ SESSION_CONFIGS = [
     # ══════════════════════════════════════════════════════════════
 
     dict(
-        name='online_first_high',
-        display_name='Online | First | High Transparency | Fixed Accuracy',
+        name='online_principal_high',
+        display_name='Online | Principal-augmented | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='fixed',
         sync=False,
     ),
     dict(
-        name='online_first_low',
-        display_name='Online | First | Low Transparency | Fixed Accuracy',
+        name='online_principal_low',
+        display_name='Online | Principal-augmented | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='fixed',
         sync=False,
     ),
     dict(
-        name='online_middle_high',
-        display_name='Online | Middle | High Transparency | Fixed Accuracy',
+        name='online_agent_high',
+        display_name='Online | Agent-augmented | High Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='fixed',
         sync=False,
     ),
     dict(
-        name='online_middle_low',
-        display_name='Online | Middle | Low Transparency | Fixed Accuracy',
+        name='online_agent_low',
+        display_name='Online | Agent-augmented | Low Transparency | Fixed Accuracy',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='fixed',
         sync=False,
     ),
 
     # ══════════════════════════════════════════════════════════════
-    # Accuracy Manipulation versions (if accuracy becomes 3rd IV)
+    # Accuracy Manipulation versions (Paper 2 — reliability consistency)
     # ══════════════════════════════════════════════════════════════
 
     dict(
-        name='lab_first_high_manip',
-        display_name='Lab | First | High Transparency | Accuracy Manipulation',
+        name='lab_principal_high_manip',
+        display_name='Lab | Principal-augmented | High Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='manipulation',
         sync=True,
     ),
     dict(
-        name='lab_first_low_manip',
-        display_name='Lab | First | Low Transparency | Accuracy Manipulation',
+        name='lab_principal_low_manip',
+        display_name='Lab | Principal-augmented | Low Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='first',
+        augmented_role='principal',
         accuracy_mode='manipulation',
         sync=True,
     ),
     dict(
-        name='lab_middle_high_manip',
-        display_name='Lab | Middle | High Transparency | Accuracy Manipulation',
+        name='lab_agent_high_manip',
+        display_name='Lab | Agent-augmented | High Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='high',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='manipulation',
         sync=True,
     ),
     dict(
-        name='lab_middle_low_manip',
-        display_name='Lab | Middle | Low Transparency | Accuracy Manipulation',
+        name='lab_agent_low_manip',
+        display_name='Lab | Agent-augmented | Low Transparency | Accuracy Manipulation',
         app_sequence=['supplier_selection'],
         num_demo_participants=2,
         has_ai=True,
         transparency='low',
-        ai_position='middle',
+        augmented_role='agent',
         accuracy_mode='manipulation',
         sync=True,
     ),
