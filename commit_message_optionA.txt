@@ -1,0 +1,89 @@
+Option A: role-allocation redesign (SA-first/PA-final, augmented_role)
+
+STRUCTURAL CHANGE
+- ai_position ('first'/'middle') retired entirely. Replaced by
+  augmented_role ('principal'/'agent'), which controls WHICH team role is
+  exposed to AI, not WHEN within one role's own judgment process.
+- Role order reversed: Sustainability Analyst (SA) now decides FIRST in
+  every condition (principal-agent framing: SA = principal, PA = agent).
+  Purchasing Analyst (PA) decides SECOND and renders the team's binding
+  final choice.
+- augmented_role='principal' -> SA reviews AI's recommendation (transparency
+  applies here) + CSR criteria, decides; PA then reviews SA's decision +
+  purchasing criteria, no AI, renders the final choice.
+- augmented_role='agent'     -> SA submits an independent CSR-only decision,
+  no AI; PA then reviews SA's decision + purchasing criteria + AI's
+  recommendation (transparency applies here), renders the final choice.
+- Human control (has_ai=False): same SA-first/PA-final order, no AI anywhere.
+- Blinding: the non-augmented partner is never told the other's decision
+  involved AI. Full disclosure happens only in the Results-page debrief.
+
+CODE
+- __init__.py: Group model reworked (sa_choice = SA's first decision,
+  pa_choice = team's final decision; augmented_role field replaces
+  ai_position; new dw_sa_initial/dominant_criterion_sa_initial fields
+  capture SA's own solo judgment quality, independent of the team's
+  eventual final choice — needed for the Paper 3 complementarity baseline).
+- Old classes removed: PAInitialDecision, SAWaitForPAInitial,
+  AIRecommendation, PADecisionControl.
+- New/rewritten classes: SADecision (SA's first-phase decision, shows AI
+  only when augmented_role='principal'), PADecision (PA's final decision,
+  always shows SA's prior choice, shows AI only when augmented_role='agent').
+- page_sequence reordered: SADecision -> PAWaitForSA -> PADecision ->
+  SAWaitForPA (wait-page classes kept, just repositioned — their names
+  already described "who waits for whom" independent of phase).
+- congruence_ai_augmented field added: compares the AI's recommendation
+  against whichever role actually saw it this session, replacing the
+  previous PA-only comparison.
+
+BUG FIX
+- TrustSurvey.get_form_fields was gating AI-directed trust items
+  (reliability/functionality/helpfulness/transparency) on has_ai alone,
+  so the non-augmented role was answering questions about an AI they never
+  saw. Now gated on was_augmented (whichever role actually saw AI this
+  session).
+
+Δw DISCLOSURE (per Voice 127 decision)
+- RoundFeedback no longer shows raw Δw numbers per round — only a
+  qualitative read (qualitative_gap()) plus the round's money bonus. Exact
+  Δw is revealed only once, in the Results-page summary at the end of
+  round 5. build_feedback_text / build_feedback_text_control updated to
+  drop numeric Δw from the per-round narrative.
+
+COMPREHENSION CHECK
+- Q3 (Δw question) removed — now stale since Δw isn't shown per round.
+- Q1's correct answer updated from 'c' (SA) to 'b' (PA), since PA is now
+  the final decision-maker under Option A.
+- Added an in-page collapsible "quick reminder" summary as a substitute
+  for real back-navigation (preserves single-pass comprehension testing
+  without adding page-flow complexity).
+
+CONTENT
+- Briefing scenario rewritten around a fictional company (Auroria Energy,
+  solar panel procurement) with an explicit first/next/finally sequential
+  description of the round, branched by augmented_role.
+- RoleAssignment, RoundIntro rewritten for SA-first/PA-final order and
+  augmented_role-conditional AI mentions.
+- Results-page debrief: added augmented_role-based blinding disclosure
+  (tells the non-augmented partner, for the first time, that the other's
+  decision involved AI) alongside the existing accuracy-mode disclosure.
+
+SETTINGS
+- SESSION_CONFIGS rewritten: ai_position keys replaced by augmented_role;
+  config names renamed (e.g. lab_first_high -> lab_principal_high,
+  lab_middle_high -> lab_agent_high). Old config names are gone from the
+  list after this deploy — past sessions/data are unaffected, but new
+  sessions can no longer be created under the old names.
+
+REMOVED FILES (delete from templates folder — classes no longer exist)
+- AIRecommendation.html
+- PADecisionControl.html
+- PAInitialDecision.html
+
+REQUIRES otree resetdb AFTER DEPLOY
+- Group model fields changed meaning (sa_choice/pa_choice) and gained new
+  fields (augmented_role, dw_sa_initial, dominant_criterion_sa_initial,
+  congruence_ai_augmented); Player lost comprehension_q3. Existing DB schema
+  will not match — run otree resetdb (via Heroku dashboard Run console)
+  before creating any new sessions, or session creation will fail with
+  UndefinedColumn errors.

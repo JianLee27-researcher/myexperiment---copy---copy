@@ -385,10 +385,9 @@ class C(BaseConstants):
     )
 
     ROUND_REPEAT_RATIONALE = (
-        "You will go through 5 rounds using the same set of suppliers. "
-        "Each round, you and your partner make independent decisions. "
-        "The purpose is to observe how your confidence and choices evolve "
-        "as you gain more experience with the AI system."
+        "You will go through 5 rounds using the same suppliers and criteria "
+        "each time. Please give your best judgment independently in each "
+        "round, based on the information available to you at that time."
     )
 
 
@@ -635,11 +634,11 @@ class Player(BasePlayer):
 
     mc_transparency_1 = models.IntegerField(
         label="The AI system provided a clear explanation of how it reached its recommendation.",
-        choices=[0, 1, 2, 3, 4, 5],
+        choices=[0, 1, 2, 3, 4, 5, 6, 7],
         widget=widgets.RadioSelect)
     mc_transparency_2 = models.IntegerField(
         label="I could understand the criteria and weights used by the AI.",
-        choices=[0, 1, 2, 3, 4, 5],
+        choices=[0, 1, 2, 3, 4, 5, 6, 7],
         widget=widgets.RadioSelect)
 
     comprehension_q1 = models.StringField(
@@ -1142,9 +1141,7 @@ class TrustSurvey(Page):
 
         return {
             'scale_7':       list(range(1, 8)),
-            'scale_5':       list(range(1, 6)),
             'scale_7_na':    [0] + list(range(1, 8)),
-            'scale_5_na':    [0] + list(range(1, 6)),
             'survey_intro':  survey_intro,
             'was_augmented': was_augmented(player),
             'has_ai':        has_ai(player),

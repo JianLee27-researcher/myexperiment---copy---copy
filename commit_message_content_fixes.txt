@@ -1,0 +1,46 @@
+Content fixes: HR due-diligence framing, 7-point scale unification, neutral round-repeat rationale
+
+HUMAN RIGHTS DUE DILIGENCE LABELING
+- Relabeled "Human Rights" -> "Human Rights Due Diligence" / "HR Due
+  Diligence" across Briefing.html, RoleAssignment.html, SADecision.html.
+  Paper 1's methodology explicitly defines this criterion as the supplier's
+  level of above-compliance due-diligence assurance (ILO alignment, audit
+  coverage, grievance mechanisms) — NOT presence/absence of violations. The
+  old plain "Human Rights" label risked participants misreading a low score
+  as "this supplier violates human rights" rather than the intended
+  above-compliance construct.
+- Added an explanatory note (Briefing.html + both SADecision.html score
+  tables): all candidate suppliers already meet baseline legal human rights
+  requirements; the score reflects additional assurance practices only.
+- PADecision.html untouched — PA never sees CSR criteria, so no mention of
+  this label existed there.
+
+TRUST SURVEY SCALE UNIFICATION
+- mc_transparency_1 / mc_transparency_2 changed from a 5-point scale
+  ([0..5]) to a 7-point scale ([0..7]), matching every other trust item in
+  the survey (team, interpersonal, McKnight reliability/functionality/
+  helpfulness). No established/validated instrument was being preserved by
+  the 5-point range — it was an unintentional inconsistency.
+- Removed now-unused scale_5 / scale_5_na template vars from TrustSurvey's
+  vars_for_template.
+- TrustSurvey.html Section 6 label updated: "5 = Strongly Agree" ->
+  "7 = Strongly Agree".
+
+ROUND-REPEAT RATIONALE — BEHAVIOR-NEUTRAL REWRITE
+- C.ROUND_REPEAT_RATIONALE (shown on Briefing.html, "Why 5 rounds?") no
+  longer implies that changing one's answer across rounds is the expected
+  or more useful outcome (old text: "the purpose is to observe how your
+  confidence and choices evolve"). New text states only that the data is
+  static across rounds and asks for an independent judgment each round,
+  without endorsing either repeating or changing one's choice — avoiding a
+  framing effect on the very behavior (round-to-round choice stability)
+  that the study measures.
+- This is a wording-only mitigation for participant-facing framing. It does
+  NOT address the underlying structural issue (suppliers/scores are static
+  across rounds, so a motivated participant can compute the true optimum
+  from round 1 data alone) — that remains an open, unresolved design
+  question per Voice_125 (advisors: "serious... I have no answer right
+  now"). AI-wrong-answer randomization (B/C/D/E instead of always E) was
+  considered as a structural fix but explicitly deferred, not implemented.
+
+No database schema changes in this commit — otree resetdb NOT required.
